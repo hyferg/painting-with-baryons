@@ -17,7 +17,7 @@ schedule['g_decay'] = torch.optim.lr_scheduler.ExponentialLR
 schedule['d_decay'] = torch.optim.lr_scheduler.ExponentialLR
 schedule['lrdecay_opts'] = {'gamma': 0.98}
 schedule['loss_params']['l1_lambda'] = (1e4)/0.05
-schedule['sample_interval'] = 750
+schedule['sample_interval'] = 1
 schedule['save_summary']['epochs'] = np.arange(0, (100+1), 10).tolist()
 
 train_loader = TrainLoader(schedule)
