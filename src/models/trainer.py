@@ -255,6 +255,7 @@ class Translator(GAN_Trainer):
         )
         UnFreezeModel(self.Generator)
 
+
     def summary_if(self, epoch):
         if self.schedule['save_summary']:
             if (epoch in self.schedule['save_summary']['epochs'] and

@@ -2,12 +2,12 @@ from torch.utils.data import Dataset
 import numpy as np
 import pprint
 import torch
+import collections
 from collections import OrderedDict
 import time
 import copy
 import gc
 import sys
-
 
 class BahamasDatasetPaired(Dataset):
     def __init__(self,
