@@ -420,7 +420,8 @@ class Translator(GAN_Trainer):
 
                     j += 1
 
-                    imgs0, imgs1 = iter(self.dataloader).next()
+                    data = iter(self.dataloader).next()
+                    imgs0, imgs1 = data[0][0], data[0][1]
                     i += 1
 
                     imgs0      = imgs0.to(self.device)
