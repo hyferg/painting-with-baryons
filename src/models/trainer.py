@@ -1,24 +1,22 @@
 import os
-import time
 import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.utils.data
 from torchvision.utils import make_grid
-import torchvision
-import torchvision.transforms as transforms
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython import display
-from src.features.transforms import fast_cosmic_sim_func
 import scipy.signal as signal
-from src.visualization.show import BahamasShow, MnistShow, MultiTargets, LossShow
-from src.visualization.compare import PowerCompare, MetaCompare
+from src.visualization.show import BahamasShow, MnistShow, MultiTargets, \
+    LossShow
+from src.visualization.new_compare import PowerCompare, MetaCompare
 from src.tools.weights import FreezeModel, UnFreezeModel
+
 
 class Trainer():
     @staticmethod
-    def factory(schedule, Generator=None, Discriminator=None, dataloader=None, device=None, testloader=None):
+    def factory(schedule, Generator=None, Discriminator=None, dataloader=None, device=None, testloader=None, **kwargs):
         if device == None:
             raise Exception('Please set a device')
         _gan_types = ['vanilla_gan', 'dc_gan', 'translator']
@@ -48,7 +46,8 @@ class Trainer():
                                            schedule=schedule,
                                            dataloader=dataloader,
                                            device=device,
-                                           testloader=testloader)
+                                           testloader=testloader,
+                                           **kwargs)
         else: raise Exception('{} is not a known trainer type'.format(schedule['type']))
 
 
@@ -76,7 +75,9 @@ class Trainer():
             param.requires_grad = True
 
     def text_if(self, gen_iterations, epoch, d_real, d_fake, adv_loss, percep_loss):
-        if gen_iterations % self.schedule['sample_interval'] == 0:
+        if (gen_iterations % self.schedule['sample_interval'] == 0 |
+            self.schedule['debug_plot']):
+
             print('epoch: {}/{}'.format(epoch, self.schedule['epochs']))
             print('d-real: {}\nd-fake: {}'.format(d_real, d_fake))
             print('g-adv: {} \ng-percep: {}'.format(adv_loss, percep_loss))
@@ -88,23 +89,23 @@ class Trainer():
 
 class GAN_Trainer(Trainer):
     @staticmethod
-    def factory(schedule, Generator, Discriminator, dataloader, device, testloader):
+    def factory(schedule, Generator, Discriminator, dataloader, device, testloader, **kwargs):
         print('Creating...')
         if schedule['loss'] == 'normal':
             print(' -> Normal Trainer')
             return Normal(schedule, Generator, Discriminator, dataloader, device)
 
         elif schedule['loss'] == ['wgangp', 'wass']:
-            return Wass.factory(schedule, Generator, Discriminator, dataloader, device)
+            return Wass.factory(schedule, Generator, Discriminator, dataloader, device, **kwargs)
 
         elif schedule['loss'] == 'l1_plus':
             print(' -> Translator Trainer')
-            return Translator(schedule, Generator, Discriminator, dataloader, device, testloader)
+            return Translator(schedule, Generator, Discriminator, dataloader, device, testloader, **kwargs)
 
         else: raise Exception('{} is unknown loss type'.format(schedule['loss']))
 
 
-    def __init__(self, schedule, Generator, Discriminator, dataloader, device, testloader):
+    def __init__(self, schedule, Generator, Discriminator, dataloader, device, testloader, dataset):
         self.device = device
         self.schedule = schedule
 
@@ -118,6 +119,7 @@ class GAN_Trainer(Trainer):
         self.dataloader = dataloader
 
         self.testloader = testloader
+        self.dataset = dataset
 
         self.pre_train()
 
@@ -177,15 +179,16 @@ class GAN_Trainer(Trainer):
     def make_adam(self, model, opts):
         return optim.Adam(model.parameters(), **opts)
 
-
     def save_if(self, gen_iterations):
         if self.schedule['save_model_interval']:
             if gen_iterations % self.schedule['save_model_interval'] == 0:
                 self.Generator.save_self(self.schedule['save_dir'] + '/G_{}_giter.cpk'.format(gen_iterations))
                 self.Discriminator.save_self(self.schedule['save_dir'] + '/D_{}_giter.cpk'.format(gen_iterations))
 
-        if self.schedule['save_img_interval']:
-            if gen_iterations % self.schedule['save_img_interval'] == 0:
+        if (self.schedule['save_img_interval'] |
+            self.schedule['debug_plot']):
+            if (gen_iterations % self.schedule['save_img_interval'] == 0 |
+                self.schedule['debug_plot']):
                 BahamasShow(
                     self.fake_imgs,
                     save=True,
@@ -197,34 +200,42 @@ class GAN_Trainer(Trainer):
 
 
     def loss_if(self, gen_iterations, d_loss, g_loss, save=False, med=True, nmed=101):
-        if gen_iterations % self.schedule['sample_interval'] == 0:
+        if (gen_iterations % self.schedule['sample_interval'] == 0 |
+           self.schedule['debug_plot']):
             LossShow(d_loss, g_loss, save=save, med=med, nmed=nmed)
 
-
     def clear_if(self, gen_iterations):
-        if gen_iterations % self.schedule['sample_interval'] == 0:
+        if (gen_iterations % self.schedule['sample_interval'] == 0 |
+           self.schedule['debug_plot']):
             display.clear_output(wait=True)
 
 
 class Translator(GAN_Trainer):
-    def __init__(self, schedule, Generator, Discriminator, dataloader, device, testloader):
+    def __init__(self, schedule, Generator, Discriminator, dataloader,
+                 device, testloader, **kwargs):
         self.running_g_loss = []
         self.running_d_loss = []
         self._epoch = 0
         self.set_criterion()
         self.g_decay = None
         self.d_decay = None
-        super().__init__(schedule, Generator, Discriminator, dataloader, device, testloader)
+        super().__init__(schedule, Generator, Discriminator, dataloader,
+                         device, testloader, **kwargs)
 
-
-    def summary_save(self, epoch):
+    def summary_save(self, epoch, idxs=None):
         FreezeModel(self.Generator)
 
-        imgs0, imgs1 = iter(self.testloader).next()
+        data = iter(self.testloader).next()
+        idxs = data[1]
+        imgs0, imgs1 = data[0][0], data[0][1]
         imgs0      = imgs0.to(self.device)
         imgs1      = imgs1.to(self.device)
 
-        transforms = self.testloader.inv_transform
+        transforms = [[], []]
+        for idx in idxs:
+            _transform, _inv_transform = self.dataset.get_inverse_transforms(idx)
+            transforms[0].append(_transform)
+            transforms[1].append(_inv_transform)
 
         PowerCompare(
             generator=self.Generator,
@@ -235,7 +246,8 @@ class Translator(GAN_Trainer):
             grid_size=self.schedule['save_summary']['grid_size'],
             transform=transforms,
             save=True,
-            save_path=(self.save_path_individual + '/s_{}_epoch.png'.format(epoch))
+            save_path=(self.save_path_individual + '/s_{}_epoch.png'
+                       .format(epoch))
         )
 
         MetaCompare(
@@ -255,36 +267,39 @@ class Translator(GAN_Trainer):
         )
         UnFreezeModel(self.Generator)
 
-
     def summary_if(self, epoch):
-        if self.schedule['save_summary']:
+        if self.schedule['debug_plot'] is True:
+                self.summary_save(epoch)
+
+        elif self.schedule['save_summary']:
             if (epoch in self.schedule['save_summary']['epochs'] and
-            self._epoch+1 in self.schedule['save_summary']['epochs']):
+                    self._epoch+1 in self.schedule['save_summary']['epochs']):
                 self.summary_save(epoch)
 
         self._epoch = epoch
 
-
     def plot_if(self, gen_iterations, img_set, n=6):
-        if gen_iterations % self.schedule['sample_interval'] == 0:
+        if (gen_iterations % self.schedule['sample_interval'] == 0 |
+            self.schedule['debug_plot']
+        ):
             if self.dataloader.name == 'bahamas_paired':
                 multi = MultiTargets(
                     [img_set[0],
                      img_set[1],
                      img_set[2]], n=n)
-                BahamasShow(multi, figsize=(16,16))
-
+                BahamasShow(multi, figsize=(16, 16))
 
     def set_criterion(self, use_l1=True, use_bce=True):
-        if use_l1: self.percep_loss = nn.L1Loss()
-        if use_bce: self.adv_loss = nn.BCELoss()
-
+        if use_l1:
+            self.percep_loss = nn.L1Loss()
+        if use_bce:
+            self.adv_loss = nn.BCELoss()
 
     def train_iter(self):
         subtype = None
         try:
             subtype = self.schedule['subtype']
-        except:
+        except KeyError:
             pass
 
         if subtype == 'normal':
@@ -293,7 +308,6 @@ class Translator(GAN_Trainer):
             self.wgp_iter()
         else:
             self.normal_iter()
-
 
     def normal_iter(self):
 
@@ -382,7 +396,6 @@ class Translator(GAN_Trainer):
 
                 self.summary_if(epoch)
 
-
     def wgp_iter(self):
         gen_iterations = 0
         self.epoch = 0
@@ -391,8 +404,7 @@ class Translator(GAN_Trainer):
             self.g_decay.step()
             self.d_decay.step()
 
-            self.epoch+=1
-            data_iter = iter(self.dataloader)
+            self.epoch += 1
             i = 0
             while i < len(self.dataloader):
 
@@ -400,14 +412,14 @@ class Translator(GAN_Trainer):
 
                 try:
                     self.schedule['warm_start']
-                    if self.schedule['warm_start'] == True:
+                    if self.schedule['warm_start'] is True:
                         if gen_iterations < 25 or gen_iterations % 500 == 0:
                             Diters = 25
                         else:
                             Diters = self.schedule['loss_params']['n_critic']
                     else:
                         Diters = self.schedule['loss_params']['n_critic']
-                except:
+                except KeyError:
                     Diters = self.schedule['loss_params']['n_critic']
 
                 j = 0
@@ -439,13 +451,11 @@ class Translator(GAN_Trainer):
                     _d_loss_real.append(d_loss_real.data.cpu().numpy())
                     d_loss_real.backward()
 
-
                     # Fake Loss Backward
                     fake_probs = self.Discriminator(fake_cat)
                     d_loss_fake = fake_probs.mean()
                     _d_loss_fake.append(d_loss_fake.data.cpu().numpy())
                     d_loss_fake.backward()
-
 
                     # Gradient Penalty Backwards
                     epsilon = torch.rand(
@@ -468,15 +478,22 @@ class Translator(GAN_Trainer):
                                                     retain_graph=True,
                                                     only_inputs=True)[0]
 
-
-                    gp = ((gradients.norm(p=2, dim=1) - 1.) ** 2).mean() * self.schedule['loss_params']['grad_lambda']
+                    gp = (
+                        ((gradients.norm(p=2, dim=1) - 1.) ** 2).mean() *
+                        self.schedule['loss_params']['grad_lambda']
+                    )
                     gp.backward()
-
 
                     self.d_loss = (d_loss_real + d_loss_fake).detach()
                     _running_d_loss.append(-self.d_loss.cpu().numpy())
 
                     self.d_optimizer.step()
+
+                    if self.schedule['debug_plot']:
+                        print('d train done')
+                        break
+
+
 
                 # save info
                 self.running_d_loss.append(np.mean(_running_d_loss))
@@ -488,8 +505,8 @@ class Translator(GAN_Trainer):
 
                 self.g_optimizer.zero_grad()
 
-
-                imgs0, imgs1 = iter(self.dataloader).next()
+                data = iter(self.dataloader).next()
+                imgs0, imgs1 = data[0][0], data[0][1]
                 i += 1
 
                 imgs0      = imgs0.to(self.device)
@@ -509,7 +526,12 @@ class Translator(GAN_Trainer):
 
                 gen_iterations += 1
 
-                self.running_g_loss.append(self.g_loss.data.cpu().numpy() + l1_loss.data.cpu().numpy())
+                self.running_g_loss.append(
+                    self.g_loss.data.cpu().numpy() + l1_loss.data.cpu().numpy()
+                )
+
+                if self.schedule['debug_plot']:
+                    print('g train done')
 
                 self.clear_if(gen_iterations)
 
@@ -525,12 +547,13 @@ class Translator(GAN_Trainer):
                              self.running_g_loss,
                              med=True)
 
-
+                '''
                 self.plot_if(gen_iterations, [
                     imgs0,
                     imgs1,
                     imgs1_fake
                 ], n=2)
+                '''
 
                 self.save_if(gen_iterations)
 
@@ -864,5 +887,3 @@ class Normal(GAN_Trainer):
         self.g_loss = -0.5*torch.log(self.Discriminator(fake_imgs)).mean()
         self.g_loss.backward()
         self.g_optimizer.step()
-
-

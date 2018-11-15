@@ -59,7 +59,8 @@ class boiler(object):
                                        discriminator,
                                        dataloader=train_loader,
                                        testloader=test_loader,
-                                       device=device)
+                                       device=device,
+                                       dataset=test_dataset)
 
 
         os.makedirs(s.schedule['save_dir'], exist_ok=True)

@@ -1,6 +1,5 @@
 import torch
 import os
-import pickle
 import numpy as np
 from baryon_painter.utils.data_transforms import \
     create_range_compress_transforms, chain_transformations, \
@@ -28,7 +27,8 @@ paper_opts = adam_opts
 paper_opts['betas'] = (0.5, 0.999)
 paper_opts['lr'] = 0.0002
 
-range_compress_transform, range_compress_inv_transform = create_range_compress_transforms(k_values={"dm" : 2, "gas" : 2, "pressure" : 4})
+range_compress_transform, range_compress_inv_transform = \
+ create_range_compress_transforms(k_values={"dm": 2, "gas": 2, "pressure": 4})
 
 
 transform = chain_transformations([range_compress_transform,
@@ -36,6 +36,7 @@ transform = chain_transformations([range_compress_transform,
 
 inv_transform = chain_transformations([squeeze,
                                        range_compress_inv_transform])
+
 
 def Schedule(name, transform=transform, inv_transform=inv_transform,
              loss_params=loss_params, paper_opts=paper_opts,
@@ -64,6 +65,7 @@ def Schedule(name, transform=transform, inv_transform=inv_transform,
         'save_model_interval': None,
         'save_img_interval': None,
         'save_dir': os.getenv('SDIR') + name,
+        'debug_plot': False,
         'save_summary': {
             'epochs': np.arange(0, (epoch_end+1), 10).tolist(),
             'box_size': (100, 100),
@@ -72,5 +74,3 @@ def Schedule(name, transform=transform, inv_transform=inv_transform,
         }
     }
     return schedule
-
-

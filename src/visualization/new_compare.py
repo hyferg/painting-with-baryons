@@ -4,23 +4,8 @@ import matplotlib.gridspec as gridspec
 from IPython import display
 from src.tools.stats import CrossCompare, AutoCompare
 
+
 def parse_imgs(inputs, targets, fake_targets, transform, debug):
-    if debug:
-        for i, val in enumerate(inputs):
-            _val = targets[i].cpu().numpy()
-            _fake_targets = fake_targets.cpu().numpy()
-            print(
-                'power compare real: {} | {}'.format(
-                    np.ndarray.min(_val),
-                    np.ndarray.max(_val)
-                )
-            )
-            print(
-                'power compare fake: {} | {}\n'.format(
-                    np.ndarray.min(_fake_targets[i]),
-                    np.ndarray.max(_fake_targets[i])
-                )
-            )
 
     flat_targets = targets.cpu().numpy().flatten()
     flat_fake_targets = fake_targets.cpu().numpy().flatten()
@@ -28,29 +13,16 @@ def parse_imgs(inputs, targets, fake_targets, transform, debug):
     if transform:
         if debug:
             print('transform')
-        inputs = transform[0](inputs.cpu().numpy())
-        targets = transform[1](targets.cpu().numpy())
-        fake_targets = transform[1](fake_targets.cpu().numpy())
+        transformed_inputs = []
+        transformed_targets = []
+        transformed_fake_targets = []
+        for i, imgs in enumerate(zip(inputs, targets, fake_targets)):
+            transformed_inputs.append(transform[0][i](imgs[0].cpu().numpy()))
+            transformed_targets.append(transform[1][i](imgs[1].cpu().numpy()))
+            transformed_fake_targets.append(transform[1][i](imgs[2].cpu().numpy()))
 
-
-    if debug:
-        for i, val in enumerate(inputs):
-            _val = targets[i].cpu().numpy()
-            _fake_targets = fake_targets.cpu().numpy()
-            print(
-                'power compare real: {} | {}'.format(
-                    np.ndarray.min(_val),
-                    np.ndarray.max(_val)
-                )
-            )
-            print(
-                'power compare fake: {} | {}\n'.format(
-                    np.ndarray.min(_fake_targets[i]),
-                    np.ndarray.max(_fake_targets[i])
-                )
-            )
-
-    return inputs, targets, fake_targets, flat_targets, flat_fake_targets
+    return (transformed_inputs, transformed_targets, transformed_fake_targets,
+            flat_targets, flat_fake_targets)
 
 
 def GetSet(generator, inputs, targets, transform, debug):
