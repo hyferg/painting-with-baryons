@@ -58,16 +58,15 @@ def Schedule(name, transform=transform, inv_transform=inv_transform,
         'lrdecay_opts': {
             'gamma': 0.98
         },
-        'sample_interval': 10,
+        'sample_interval': 100,
         'batch_size': 4,
         'n_test': n_test,
         'epochs': epoch_end,
-        'save_model_interval': None,
-        'save_img_interval': None,
         'save_dir': os.getenv('SDIR') + name,
         'debug_plot': False,
+        'mem_debug': True,
         'save_summary': {
-            'epochs': np.arange(0, (epoch_end+1), 10).tolist(),
+            'iters': np.arange(0, 10000, 50).tolist(), #np.arange(0, 1000, 10).tolist()
             'box_size': (100, 100),
             'n': 4,
             'grid_size': (2, 2)
