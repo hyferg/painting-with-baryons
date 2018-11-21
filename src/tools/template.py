@@ -8,6 +8,7 @@ from src.models.network import Network
 from baryon_painter.utils.datasets import BAHAMASDataset
 import src.visualization.show as show
 from torch.utils.data import DataLoader
+import src.tools.stats as stat
 
 
 class GAN_Painter(Painter):
@@ -89,12 +90,7 @@ class GAN_Painter(Painter):
 
         return [x.squeeze() for x in [inputs, outputs, painted]]
 
-    def validate_batch(self, batch_size):
-        inputs, outputs, painted = self.get_batch(4)
-
-        data = [inputs, outputs, painted]
-        fields = ['dm', 'pressure', 'pressure']
-        names = ['dm', 'pressure', 'painted pressure']
+    def validate_transforms(self, data, fields):
         for i, imgs in enumerate(data):
             transformed_imgs = self.transform(imgs,
                                               field=fields[i],
@@ -106,9 +102,71 @@ class GAN_Painter(Painter):
 
             assert(np.allclose(imgs, flipped_imgs))
 
+    def compare_cc(self, true, fake, box_size, batch_size, n_k_bin):
+        fig, axs = plt.subplots(3,3)
+        fig.set_size_inches(20, 10)
+        y_frac_batch = np.zeros((batch_size, n_k_bin))
+        for i in range(batch_size):
+            x, y  = stat.cross([true[0][i], true[1][i]], box_size=box_size, n_k_bin=n_k_bin)
+            _x, _y  = stat.cross([fake[0][i], fake[1][i]], box_size=box_size, n_k_bin=n_k_bin)
+            frac_diff = _y/y-1
+            y_frac_batch[i,:] = frac_diff
 
-        for i, imgs in enumerate([inputs, outputs, painted]):
+            axs[0][0].plot(x, frac_diff, alpha=0.2)
 
-            show.PixelDist(imgs, field='normal ' + names[i], fromtorch=False, xlim=False)
-            _imgs = self.transform(imgs, field=fields[i], z=None, stats=None)
-            show.PixelDist(_imgs, field='transformed ' + names[i], fromtorch=False)
+            axs[0][1].plot(x, frac_diff, alpha=0.2)
+            axs[0][1].set_ylim([-1, 1])
+
+            axs[0][2].plot(x, frac_diff, alpha=0.2)
+            axs[0][2].set_ylim([-0.2, 0.2])
+
+
+        y_frac = np.average(y_frac_batch, axis=0)
+        y_frac_std = y_frac_batch.std(axis=0)
+
+        axs[1][0].plot(x, y_frac)
+
+        axs[1][1].plot(x, y_frac)
+        axs[1][1].set_ylim([-1, 1])
+
+        axs[1][2].plot(x, y_frac)
+        axs[1][2].set_ylim([-0.2, 0.2])
+
+        axs[2][0].plot(x, y_frac_std)
+
+        axs[2][1].plot(x, y_frac_std)
+        axs[2][1].set_ylim([0, 10])
+
+
+        axs[2][2].plot(x, y_frac_std)
+        axs[2][2].set_ylim([0, 1])
+
+        for i, row in enumerate(axs):
+            for ax in row:
+                ax.set_xscale('log')
+                if i == 0:
+                    ax.set_title('fractional differences')
+                if i == 1:
+                    ax.set_title('average fractional difference')
+                    ax.axhline(y=0, linewidth=1, color='black')
+                if i == 2:
+                    ax.set_title('standard deviation')
+
+        return fig
+
+    def validate_batch(self, batch_size, box_size=(100, 100), n_k_bin=20):
+        inputs, outputs, painted = self.get_batch(batch_size)
+
+        data = [inputs, outputs, painted]
+        fields = ['dm', 'pressure', 'pressure']
+        names = ['dm', 'pressure', 'painted pressure']
+
+        cc_params = {'box_size': (100, 100), 'batch_size': batch_size,
+                     'n_k_bin': n_k_bin}
+        fig = self.compare_cc([inputs, outputs], [inputs, painted], **cc_params)
+        fig.suptitle('Dark Matter x Pressure Cross Correlation')
+
+        fig = self.compare_cc([outputs, outputs], [painted, painted], **cc_params)
+        fig.suptitle('Auto Pressure Cross Correlation')
+
+        plt.show()

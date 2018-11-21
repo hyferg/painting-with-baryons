@@ -2,6 +2,24 @@ import numpy as np
 from math import pi
 import matplotlib.pyplot as plt
 
+def cross(imgs, box_size, n_k_bin=20):
+    assert len(imgs) == 2, f'Input 2 not {len(imgs)} images'
+    assert imgs[0].shape == imgs[1].shape, f'Imgage dim {imgs[0].shape} not match {{imgs[0].shape}}'
+    assert len(imgs[0].shape) == 2, f'2D images only, not {imgs[0].shape}'
+
+    k_min = 2*pi/box_size[0]
+    k_max = 2*pi/box_size[0]*imgs[0].shape[1]/2
+
+    pCl_real, Pk_err_true, ell0, bins, n_mode = calculate_pseudo_Cl(imgs[0],
+                                                                    imgs[1],
+                                                                    box_size,
+                                                                    ell_min=k_min,
+                                                                    ell_max=k_max,
+                                                                    n_bin=n_k_bin,
+                                                                    logspaced=True)
+
+    return ell0, pCl_real
+
 
 def CrossCompare(dict0, dict1, box_size, plot=False):
     imgs0 = np.squeeze(dict0['data'])
@@ -32,16 +50,15 @@ def CrossCompare(dict0, dict1, box_size, plot=False):
     power[dict0['name']] = [ell0, pCl_real0]
     power[dict1['name']] = [ell1, pCl_real1]
 
-    x0, y0 = power[dict0['name']]
-
     if plot:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.set_xscale('log')
         ax.set_yscale('log')
-        plt.scatter(ell0, pCl_real0, label=dict0['name'])
-        plt.scatter(ell1, pCl_real1, label=dict1['name'])
+        for i, key in enumerate(power):
+            plt.plot(power[key][0], power[key][1], label=key)
         ax.legend()
+        return power
 
     else:
         return power
