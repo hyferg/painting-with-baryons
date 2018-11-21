@@ -120,7 +120,6 @@ class GAN_Painter(Painter):
             axs[0][2].plot(x, frac_diff, alpha=0.2)
             axs[0][2].set_ylim([-0.2, 0.2])
 
-
         y_frac = np.average(y_frac_batch, axis=0)
         y_frac_std = y_frac_batch.std(axis=0)
 
@@ -136,7 +135,6 @@ class GAN_Painter(Painter):
 
         axs[2][1].plot(x, y_frac_std)
         axs[2][1].set_ylim([0, 10])
-
 
         axs[2][2].plot(x, y_frac_std)
         axs[2][2].set_ylim([0, 1])
@@ -154,19 +152,19 @@ class GAN_Painter(Painter):
 
         return fig
 
-    def validate_batch(self, batch_size, box_size=(100, 100), n_k_bin=20):
+    def validate_batch(self, batch_size, box_size, n_k_bin=20):
         inputs, outputs, painted = self.get_batch(batch_size)
 
         data = [inputs, outputs, painted]
         fields = ['dm', 'pressure', 'pressure']
         names = ['dm', 'pressure', 'painted pressure']
 
-        cc_params = {'box_size': (100, 100), 'batch_size': batch_size,
+        cc_params = {'box_size': box_size, 'batch_size': batch_size,
                      'n_k_bin': n_k_bin}
         fig = self.compare_cc([inputs, outputs], [inputs, painted], **cc_params)
-        fig.suptitle('Dark Matter x Pressure Cross Correlation')
+        fig.suptitle(f'Dark Matter x Pressure Cross Correlation [{batch_size} samples]')
 
         fig = self.compare_cc([outputs, outputs], [painted, painted], **cc_params)
-        fig.suptitle('Auto Pressure Cross Correlation')
+        fig.suptitle('Auto Pressure Cross Correlation [{batch_size} samples]')
 
         plt.show()

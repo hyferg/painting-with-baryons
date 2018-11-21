@@ -20,4 +20,6 @@
       1. k=9
       2. k=9 slower lr
       3. k=0.5
-  16. Meta ResNet
+  16. Redo of 10
+      - with exponential deacy
+      - with fcs transform using #10's k values
