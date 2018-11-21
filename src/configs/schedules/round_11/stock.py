@@ -1,10 +1,7 @@
 import torch
 import os
 import numpy as np
-from baryon_painter.utils.data_transforms import \
-    create_range_compress_transforms, chain_transformations, \
-    atleast_3d, squeeze
-
+from baryon_painter.utils import data_transforms
 
 # stock adam optimizer options
 
@@ -27,15 +24,26 @@ paper_opts = adam_opts
 paper_opts['betas'] = (0.5, 0.999)
 paper_opts['lr'] = 0.0002
 
-range_compress_transform, range_compress_inv_transform = \
- create_range_compress_transforms(k_values={"dm": 2, "gas": 2, "pressure": 4})
+split_scale_transform, inv_split_scale_transform = data_transforms.create_split_scale_transform(n_scale=2,
+                                                                                                step_size=8,
+                                                                                                include_original=False,
+                                                                                                truncate=2.0)
 
+range_compress_transform, range_compress_inv_transform = data_transforms.create_range_compress_transforms(
+    k_values={"dm" : 1.5,
+              "pressure" : 4},
+    modes={"dm":"x/(1+x)",
+           "pressure" : "log"})
 
-transform = chain_transformations([range_compress_transform,
-                                   atleast_3d])
+transform = data_transforms.chain_transformations([range_compress_transform,
+                                                   split_scale_transform,
+                                                   data_transforms.atleast_3d,
+])
 
-inv_transform = chain_transformations([squeeze,
-                                       range_compress_inv_transform])
+inv_transform = data_transforms.chain_transformations([data_transforms.squeeze,
+                                                       inv_split_scale_transform,
+                                                       range_compress_inv_transform,
+])
 
 
 def Schedule(name, transform=transform, inv_transform=inv_transform,
@@ -59,6 +67,7 @@ def Schedule(name, transform=transform, inv_transform=inv_transform,
             'gamma': 0.98
         },
         'sample_interval': 50,
+        'redshifts': [0.0, 0.5, 1.0],
         'batch_size': 4,
         'n_test': n_test,
         'epochs': epoch_end,

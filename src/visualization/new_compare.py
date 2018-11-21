@@ -3,12 +3,17 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from IPython import display
 from src.tools.stats import CrossCompare, AutoCompare
+from src.tools.memory import get_gpu_memory_map, mem_report
+import objgraph
 
 
 def parse_imgs(inputs, targets, fake_targets, transform, debug):
 
-    flat_targets = targets.cpu().numpy().flatten()
-    flat_fake_targets = fake_targets.cpu().numpy().flatten()
+    inputs = inputs.cpu().numpy()
+    targets = targets.cpu().numpy()
+    fake_targets = fake_targets.cpu().numpy()
+    flat_targets = targets.flatten()
+    flat_fake_targets = fake_targets.flatten()
 
     if transform:
         if debug:
@@ -17,11 +22,15 @@ def parse_imgs(inputs, targets, fake_targets, transform, debug):
         transformed_targets = []
         transformed_fake_targets = []
         for i, imgs in enumerate(zip(inputs, targets, fake_targets)):
-            transformed_inputs.append(transform[0][i](imgs[0].cpu().numpy()))
-            transformed_targets.append(transform[1][i](imgs[1].cpu().numpy()))
-            transformed_fake_targets.append(transform[1][i](imgs[2].cpu().numpy()))
+            transformed_inputs.append(transform[0][i](imgs[0]))
+            transformed_targets.append(transform[1][i](imgs[1]))
+            transformed_fake_targets.append(transform[1][i](imgs[2]))
 
-    return (transformed_inputs, transformed_targets, transformed_fake_targets,
+        return (transformed_inputs, transformed_targets, transformed_fake_targets,
+                flat_targets, flat_fake_targets)
+
+
+    return (inputs, targets, fake_targets,
             flat_targets, flat_fake_targets)
 
 
@@ -30,21 +39,17 @@ def GetSet(generator, inputs, targets, transform, debug):
     returns:
         inputs, targets, fake_targets, flat_targets, flat_fake_targets
     '''
+
     fake_targets = generator(inputs)
-    return parse_imgs(inputs, targets, fake_targets, transform=transform, debug=debug)
+
+
+    parsed_imgs = parse_imgs(inputs, targets, fake_targets, transform=transform, debug=debug)
+
+    return parsed_imgs
 
 
 def meta_compare(inputs, targets, fake_targets, flat_targets, flat_fake_targets,
                  box_size, transform, save, save_path, debug):
-    try:
-        inputs.device
-        targets.device
-        fake_targets.device
-        inputs = inputs.cpu().numpy()
-        targets = targets.cpu().numpy()
-        fake_targets = fake_targets.cpu().numpy()
-    except:
-        pass
 
 
     auto = {}
@@ -215,6 +220,7 @@ def MetaCompare(generator, inputs, targets, box_size,
                 save=False,
                 save_path=None,
                 debug=False):
+
 
     inputs, targets, fake_targets, flat_targets, flat_fake_targets = GetSet(generator, inputs, targets,
                                                                             transform=transform, debug=debug)

@@ -220,6 +220,8 @@ class ResNet(CNN):
         return x
 
 
+#TODO class MetaResNet(ResNet):
+
 class DcganGenerator(CNN):
     '''
     INPUT dims: ((N,) + z)

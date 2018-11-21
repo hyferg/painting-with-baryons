@@ -1,5 +1,6 @@
 import os
 import pickle
+import dill
 from torch.utils.data import DataLoader
 from src.models.network import Network
 from src.models.trainer import Trainer
@@ -39,11 +40,13 @@ class boiler(object):
         inv_transform = schedule['inv_transform']
 
         train_dataset = BAHAMASDataset(training_files_info, root_path=data_path,
+                                       redshifts=schedule['redshifts'],
                                        label_fields=label_fields,
                                        transform=transform,
                                        inverse_transform=inv_transform)
 
-        test_dataset = BAHAMASDataset(training_files_info, root_path=data_path,
+        test_dataset = BAHAMASDataset(test_files_info, root_path=data_path,
+                                       redshifts=schedule['redshifts'],
                                        label_fields=label_fields,
                                        transform=transform,
                                        inverse_transform=inv_transform)
@@ -64,6 +67,7 @@ class boiler(object):
 
 
         os.makedirs(s.schedule['save_dir'], exist_ok=True)
+        os.makedirs(s.schedule['save_dir'] + '/parts/', exist_ok=True)
 
         print(generator)
         print(discriminator)
@@ -76,6 +80,15 @@ class boiler(object):
 
         _sch = open(s.schedule['save_dir'] + 'schedule.txt', 'w+')
         _sch.write(s.schedule.__repr__())
+
+        with open(s.schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
+            pickle.dump(g_struc, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(s.schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
+            dill.dump(s.schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(s.schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
+            dill.dump(s.schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         _gen.close()
         _dis.close()

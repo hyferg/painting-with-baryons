@@ -14,6 +14,7 @@ from src.visualization.show import BahamasShow, MnistShow, MultiTargets, \
     LossShow
 from src.visualization.new_compare import PowerCompare, MetaCompare
 from src.tools.weights import FreezeModel, UnFreezeModel
+from src.tools.memory import get_gpu_memory_map
 
 
 class Trainer():
@@ -198,49 +199,52 @@ class Translator(GAN_Trainer):
                          device, testloader, **kwargs)
 
     def summary_save(self, n_iter, idxs=None):
-        FreezeModel(self.Generator)
+        with torch.no_grad():
+            self.Generator.eval()
+            self.Generator.save_self(self.schedule['save_dir'] + '/parts/g_{}_iter.cp'.format('n_iter'))
+            self.Discriminator.save_self(self.schedule['save_dir'] + '/d_{}_iter.cp'.format('n_iter'))
+            data = next(self.test_iter)
+            idxs = data[1]
+            imgs0, imgs1 = data[0][0], data[0][1]
+            imgs0      = imgs0.to(self.device)
+            imgs1      = imgs1.to(self.device)
 
-        data = iter(self.testloader).next()
-        idxs = data[1]
-        imgs0, imgs1 = data[0][0], data[0][1]
-        imgs0      = imgs0.to(self.device)
-        imgs1      = imgs1.to(self.device)
+            transforms = [[], []]
+            for idx in idxs:
+                _transform, _inv_transform = self.dataset.get_inverse_transforms(idx)
+                transforms[0].append(_transform)
+                transforms[1].append(_inv_transform)
 
-        transforms = [[], []]
-        for idx in idxs:
-            _transform, _inv_transform = self.dataset.get_inverse_transforms(idx)
-            transforms[0].append(_transform)
-            transforms[1].append(_inv_transform)
+            PowerCompare(
+                generator=self.Generator,
+                inputs=imgs0,
+                targets=imgs1,
+                box_size=self.schedule['save_summary']['box_size'],
+                n=self.schedule['save_summary']['n'],
+                grid_size=self.schedule['save_summary']['grid_size'],
+                transform=transforms,
+                save=True,
+                save_path=(self.save_path_individual + '/s_{}_n_iter.png'
+                        .format(n_iter))
+            )
 
-        PowerCompare(
-            generator=self.Generator,
-            inputs=imgs0,
-            targets=imgs1,
-            box_size=self.schedule['save_summary']['box_size'],
-            n=self.schedule['save_summary']['n'],
-            grid_size=self.schedule['save_summary']['grid_size'],
-            transform=transforms,
-            save=True,
-            save_path=(self.save_path_individual + '/s_{}_n_iter.png'
-                       .format(n_iter))
-        )
-
-        MetaCompare(
-            generator=self.Generator,
-            inputs=imgs0,
-            targets=imgs1,
-            box_size=self.schedule['save_summary']['box_size'],
-            transform=transforms,
-            save=True,
-            save_path=(self.save_path_meta + 'm_{}_n_iter.png'.format(n_iter))
-        )
-        LossShow(
-            self.running_d_loss,
-            self.running_g_loss,
-            save=True,
-            save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
-        )
-        UnFreezeModel(self.Generator)
+            MetaCompare(
+                generator=self.Generator,
+                inputs=imgs0,
+                targets=imgs1,
+                box_size=self.schedule['save_summary']['box_size'],
+                transform=transforms,
+                save=True,
+                save_path=(self.save_path_meta + 'm_{}_n_iter.png'.format(n_iter)),
+                debug=True
+            )
+            LossShow(
+                self.running_d_loss,
+                self.running_g_loss,
+                save=True,
+                save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
+            )
+            self.Generator.train()
 
     def summary_if_iter(self, n_iter, _n_iter):
         if self.schedule['debug_plot'] is True:
@@ -283,26 +287,30 @@ class Translator(GAN_Trainer):
         else:
             self.normal_iter()
 
-    def wgp_iter(self):
-        self.gen_iterations = 0
-        self.epoch = 0
-        if self.schedule['mem_debug'] is True:
-            logging.basicConfig(filename=self.schedule['save_dir'] + 'mem_debug.log',level=logging.DEBUG)
-            objgraph.show_most_common_types()
-            objgraph.show_growth(limit=3)
-        for epoch in range(self.schedule['epochs']):
-
+    def decay_if_iter(self, i):
+        decay_cond = self.schedule['decay_iter']
+        if (i % decay_cond == 0) and i is not 0:
+            print('decaying')
             self.g_decay.step()
             self.d_decay.step()
 
+    def wgp_iter(self):
+        self.Generator.train()
+        self.gen_iterations = 0
+        self.epoch = 0
+        for epoch in range(self.schedule['epochs']):
+
+
             self.epoch += 1
             i = 0
+            data_iter = iter(self.dataloader)
+            self.test_iter = iter(self.testloader)
             while i < len(self.dataloader):
-
-                data_iter = iter(self.dataloader)
 
                 print(self.gen_iterations)
                 UnFreezeModel(self.Discriminator)
+
+                self.decay_if_iter(self.gen_iterations)
 
                 try:
                     self.schedule['warm_start']
@@ -323,8 +331,6 @@ class Translator(GAN_Trainer):
 
                 # train D
                 while j < Diters and i < len(self.dataloader):
-                    print('train d')
-
                     j += 1
 
                     data = data_iter.next()
@@ -384,14 +390,6 @@ class Translator(GAN_Trainer):
 
                     self.d_optimizer.step()
 
-                    if self.schedule['mem_debug'] is True:
-                        objgraph.show_growth()
-
-                    if self.schedule['debug_plot']:
-                        print('d train done')
-                        break
-
-
 
                 # save info
                 self.running_d_loss.append(np.mean(_running_d_loss))
@@ -425,12 +423,11 @@ class Translator(GAN_Trainer):
 
                 self.gen_iterations += 1
 
+
                 self.running_g_loss.append(
                     self.g_loss.data.cpu().numpy() + l1_loss.data.cpu().numpy()
                 )
 
-                if self.schedule['debug_plot']:
-                    print('g train done')
 
                 self.clear_if(self.gen_iterations)
 
@@ -454,5 +451,5 @@ class Translator(GAN_Trainer):
 
                 self.summary_if_iter(self.gen_iterations, self._gen_iterations)
 
-                print('plot end')
+                torch.cuda.empty_cache()
 

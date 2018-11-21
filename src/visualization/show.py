@@ -103,14 +103,14 @@ def MultiTargets(img_set, n=6):
     return merge.view((merge.shape[0], 1, merge.shape[1], merge.shape[2]))
 
 
-def PixelDist(imgs, fromtorch=True, xlim=True):
+def PixelDist(imgs, fromtorch=True, xlim=True, field=None):
     if fromtorch:
         imgs = imgs.cpu().numpy()
     n_samples = imgs.shape[0]
     imgs = imgs.flatten()
     fig = plt.figure(figsize=(10,5))
     ax = plt.subplot(111)
-    ax.set_title('Pixel Distribution from {}'.format(n_samples))
+    ax.set_title('Pixel Dist from {}, {} samples'.format(field, n_samples))
     if xlim:
         ax.set_xlim([-1, 1])
     ax.hist(imgs, bins=50)

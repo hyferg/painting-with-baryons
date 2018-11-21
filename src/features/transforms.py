@@ -2,6 +2,31 @@ import numpy as np
 import torch
 from torchvision import transforms
 
+
+class ChainTransformations:
+    def __init__(self, transformations):
+        self.transformations = transformations
+
+    def __call__(self, x, field, z, stats):
+        for t in self.transformations:
+            x = t(x, field, z, stats)
+        return x
+
+
+
+def create_fcs(k_values, scale, shift):
+    def transform(x, field, z=None, stats=None):
+        k = k_values[field]
+        return (scale*x)/(x+k) + shift
+
+    def inv_transform(x, field, z=None, stats=None):
+        k = k_values[field]
+        return k*(shift - x)/(x-shift-scale)
+
+    return transform, inv_transform
+
+
+
 class XTF(object):
     def __init__(self, mean, k, inverse=False, totorch=False):
         self.k = k

@@ -1,0 +1,23 @@
+* Round
+  1. 
+  2. 
+  3. 
+  4. 
+  5. 
+  6. Best results from dm -> gas
+  7. 
+  8. 
+  9. 
+  10. First run on pressure with Troster dataloader,
+      - range compress transform
+      - this run accidentally did not implement the decaying learning rate
+  11. Split scale + range compress transform (not in that order
+  12. same as 11 with large batch sized and smaller lr
+  13. Redo of {11, 12} with exponential lr decay now implemented 
+  14. FCS summer transform used
+      - k=4 has a harsh decay for the pressure
+  15. like '14' but with seperate k values for fields
+      1. k=9
+      2. k=9 slower lr
+      3. k=0.5
+  16. Meta ResNet
