@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from src.models.layers.residual import ResBlocks
+import copy
 
 class Network(nn.Module):
     @staticmethod
@@ -12,8 +13,13 @@ class Network(nn.Module):
         ]
         _vanilla_types = ['vanilla_generator', 'vanilla_discriminator']
         _translator_types = ['resnet_translator']
-        if (network_structure['type'] in _dcgan_types or
-            network_structure['type'] in _translator_types):
+        if network_structure.get('bands') is not None:
+            bands = network_structure['bands']
+            network_structure.pop('bands')
+            print(' -> Meta Network')
+            return MetaNet(network_structure, bands)
+        elif (network_structure['type'] in _dcgan_types or
+              network_structure['type'] in _translator_types):
             network = CNN.factory(network_structure)
         elif (network_structure['type'] in _vanilla_types):
             if network_structure['type'] == 'vanilla_generator':
@@ -90,6 +96,24 @@ class Network(nn.Module):
             _layer_stack['layer_%d' % (i+1)] = nn.Sequential(*_layer)
 
         return nn.Sequential(_layer_stack)
+
+
+class MetaNet(nn.Module):
+    def __init__(self, network_structure, bands):
+        super(MetaNet, self).__init__()
+        self.networks = nn.ModuleList()
+        self.network_structure = network_structure
+        for band in range(bands):
+            self.networks.append(
+                Network.factory(network_structure)
+            )
+    def forward(self, split_img):
+        print(f'split shape {split_img.shape}')
+        for i, img_band in enumerate(split_img):
+            split_img[i] = self.networks[i](img_band)
+        print(split_img.shape)
+        raise
+        return split_img
 
 
 class CNN(Network):
@@ -219,8 +243,6 @@ class ResNet(CNN):
         x = self.decode(x)
         return x
 
-
-#TODO class MetaResNet(ResNet):
 
 class DcganGenerator(CNN):
     '''

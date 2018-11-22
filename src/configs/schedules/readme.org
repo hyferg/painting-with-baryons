@@ -24,3 +24,5 @@
       1. with exponential deacy
       2. same as #1 but with 10 iters for decay
       3. now using Troster range compress
+  17. meta resnet
+      1. split frequency then transform to [-1, 1]
