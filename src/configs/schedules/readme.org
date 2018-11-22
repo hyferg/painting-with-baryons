@@ -21,5 +21,6 @@
       2. k=9 slower lr
       3. k=0.5
   16. Redo of 10
-      - with exponential deacy
-      - with fcs transform using #10's k values
+      1. with exponential deacy
+      2. same as #1 but with 10 iters for decay
+      3. now using Troster range compress

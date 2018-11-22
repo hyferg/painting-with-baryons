@@ -71,36 +71,43 @@ class GAN_Painter(Painter):
         _, test_files_info = files_info(data_path)
         label_fields = ["pressure"]
 
-        test_dataset = BAHAMASDataset(test_files_info,
-                                      root_path=data_path,
-                                      redshifts=redshifts,
-                                      label_fields=label_fields)
+        self.test_dataset = BAHAMASDataset(test_files_info,
+                                           root_path=data_path,
+                                           redshifts=redshifts,
+                                           label_fields=label_fields)
 
-        self.test_iter = iter(test_dataset)
+        self.test_loader = DataLoader(self.test_dataset, batch_size=1, shuffle=True)
+
+        self.test_iter = iter(self.test_loader)
 
     def get_batch(self, batch_size):
         inputs = np.zeros((batch_size, *self.img_dim))
         outputs = np.zeros((batch_size, *self.img_dim))
         painted = np.zeros((batch_size, *self.img_dim))
+        idxs = []
         for i in range(batch_size):
             img, idx = next(self.test_iter)
+            z = self.test_dataset.sample_idx_to_redshift(idx)
             inputs[i] = img[0]
             outputs[i] = img[1]
-            painted[i] = self.paint(img[0])
+            painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats)
+            idxs.append(idx)
 
-        return [x.squeeze() for x in [inputs, outputs, painted]]
+        return [x.squeeze() for x in [inputs, outputs, painted]] + [idxs]
 
-    def validate_transforms(self, data, fields):
+    def validate_transforms(self, data, fields, stats, idxs):
         for i, imgs in enumerate(data):
-            transformed_imgs = self.transform(imgs,
-                                              field=fields[i],
-                                              z=None, stats=None)
+            for j, img in enumerate(imgs):
+                z = self.test_dataset.sample_idx_to_redshift(idxs[j])
+                transformed_img = self.transform(img,
+                                                 field=fields[i],
+                                                 z=z, stats=stats)
 
-            flipped_imgs = self.inv_transform(transformed_imgs,
-                                              field=fields[i],
-                                              z=None, stats=None)
+                flipped_img = self.inv_transform(transformed_img,
+                                                 field=fields[i],
+                                                 z=z, stats=stats)
 
-            assert(np.allclose(imgs, flipped_imgs))
+                assert(np.allclose(img, flipped_img))
 
     def compare_cc(self, true, fake, box_size, batch_size, n_k_bin):
         fig, axs = plt.subplots(3,3)
@@ -152,12 +159,19 @@ class GAN_Painter(Painter):
 
         return fig
 
-    def validate_batch(self, batch_size, box_size, n_k_bin=20):
-        inputs, outputs, painted = self.get_batch(batch_size)
+    def validate_batch(self, batch_size, box_size, n_k_bin=20, transform_closure=False):
+        inputs, outputs, painted, idxs = self.get_batch(batch_size)
 
         data = [inputs, outputs, painted]
         fields = ['dm', 'pressure', 'pressure']
         names = ['dm', 'pressure', 'painted pressure']
+
+        if transform_closure:
+            self.validate_transforms(data,
+                                     fields,
+                                     self.test_dataset.stats,
+                                     idxs,
+            )
 
         cc_params = {'box_size': box_size, 'batch_size': batch_size,
                      'n_k_bin': n_k_bin}

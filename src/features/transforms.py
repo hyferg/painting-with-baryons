@@ -14,6 +14,17 @@ class ChainTransformations:
 
 
 
+def create_fcs_clipped(k_values, scale, shift):
+    def transform(x, field, z, stats):
+        k = k_values[field]
+        return (scale*x)/(x+k) + shift
+
+    def inv_transform(x, field, z, stats):
+        k = k_values[field]
+        return k*(shift - x)/(x-shift-scale)
+
+    return transform, inv_transform
+
 def create_fcs(k_values, scale, shift):
     def transform(x, field, z=None, stats=None):
         k = k_values[field]
