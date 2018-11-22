@@ -15,6 +15,8 @@ from src.visualization.show import BahamasShow, MnistShow, MultiTargets, \
 from src.visualization.new_compare import PowerCompare, MetaCompare
 from src.tools.weights import FreezeModel, UnFreezeModel
 from src.tools.memory import get_gpu_memory_map
+from src.models.wgp_d_iter import iter_discriminator
+from src.models.wgp_g_iter import iter_generator
 
 
 class Trainer():
@@ -294,13 +296,38 @@ class Translator(GAN_Trainer):
             self.g_decay.step()
             self.d_decay.step()
 
+    def check_networks(self, networks):
+        meta_status = []
+        all_meta = False
+        bands = None
+        for network in networks:
+            if hasattr(network, 'type'):
+                if network.type == 'meta-network':
+                    meta_status.append(True)
+                else:
+                    meta_status.append(False)
+            else:
+                meta_status.append(False)
+
+            if any(meta_status) is True:
+                assert all(meta_status) is True
+                assert all(x.bands == networks[0].bands for x in networks)
+                all_meta = True
+                bands = networks[0].bands
+
+        return all_meta, bands
+
+    def band_select(self, imgs, idx):
+        return imgs[:, idx, :, :].unsqueeze(1)
+
     def wgp_iter(self):
         self.Generator.train()
         self.gen_iterations = 0
         self.epoch = 0
+        all_meta, bands = self.check_networks(
+            [self.Discriminator, self.Generator]
+        )
         for epoch in range(self.schedule['epochs']):
-
-
             self.epoch += 1
             i = 0
             data_iter = iter(self.dataloader)
@@ -315,7 +342,8 @@ class Translator(GAN_Trainer):
                 try:
                     self.schedule['warm_start']
                     if self.schedule['warm_start'] is True:
-                        if self.gen_iterations < 25 or self.gen_iterations % 500 == 0:
+                        if self.gen_iterations < 25 or \
+                           self.gen_iterations % 500 == 0:
                             Diters = 25
                         else:
                             Diters = self.schedule['loss_params']['n_critic']
@@ -337,64 +365,36 @@ class Translator(GAN_Trainer):
                     imgs0, imgs1 = data[0][0], data[0][1]
                     i += 1
 
-                    imgs0      = imgs0.to(self.device)
-                    imgs1      = imgs1.to(self.device)
-                    imgs1_fake = self.Generator(imgs0)
-                    real_cat = torch.cat([imgs0, imgs1], dim=1)
-                    fake_cat = torch.cat([imgs0, imgs1_fake], dim=1).detach()
+                    imgs0 = imgs0.to(self.device)
+                    imgs1 = imgs1.to(self.device)
 
-                    batch_size = imgs0.size()[0]
                     self.d_optimizer.zero_grad()
 
-                    # Real Loss Backward
-                    real_probs = self.Discriminator(real_cat)
-                    d_loss_real = -real_probs.mean()
-                    _d_loss_real.append(d_loss_real.data.cpu().numpy())
-                    d_loss_real.backward()
+                    if all_meta:
+                        for i in range(bands):
+                            input_feed = self.band_select(imgs0, i)
+                            target_feed = self.band_select(imgs1, i)
+                            d_loss_real, d_loss_fake, = iter_discriminator(
+                                self.Generator.networks[i],
+                                self.Discriminator.networks[i],
+                                input_feed, target_feed,
+                                self.schedule['loss_params']['grad_lambda'],
+                                self.device)
+                    else:
+                        d_loss_real, d_loss_fake, = iter_discriminator(
+                            self.Generator,
+                            self.Discriminator,
+                            imgs0, imgs1,
+                            self.schedule['loss_params']['grad_lambda'],
+                            self.device)
 
-                    # Fake Loss Backward
-                    fake_probs = self.Discriminator(fake_cat)
-                    d_loss_fake = fake_probs.mean()
-                    _d_loss_fake.append(d_loss_fake.data.cpu().numpy())
-                    d_loss_fake.backward()
-
-                    # Gradient Penalty Backwards
-                    epsilon = torch.rand(
-                        (batch_size, 1, 1, 1),
-                        device=self.device)
-
-                    x_hat = epsilon*real_cat.data + (1-epsilon)*fake_cat.data
-                    x_hat.requires_grad_(True)
-
-                    d_interpolates = self.Discriminator(x_hat)
-
-                    placeholder = torch.ones(
-                        d_interpolates.size(),
-                        device=self.device)
-
-                    gradients = torch.autograd.grad(outputs=d_interpolates,
-                                                    inputs=x_hat,
-                                                    grad_outputs=placeholder,
-                                                    create_graph=True,
-                                                    retain_graph=True,
-                                                    only_inputs=True)[0]
-
-                    gp = (
-                        ((gradients.norm(p=2, dim=1) - 1.) ** 2).mean() *
-                        self.schedule['loss_params']['grad_lambda']
-                    )
-                    gp.backward()
-
-                    self.d_loss = (d_loss_real + d_loss_fake).detach()
-                    _running_d_loss.append(-self.d_loss.cpu().numpy())
+                    _d_loss_real.append(d_loss_real)
+                    _d_loss_fake.append(d_loss_fake)
+                    _running_d_loss.append(-(d_loss_real + d_loss_fake))
 
                     self.d_optimizer.step()
 
-
                 # save info
-                self.running_d_loss.append(np.mean(_running_d_loss))
-                _d_loss_real = np.mean(_d_loss_real)
-                _d_loss_fake = np.mean(_d_loss_fake)
                 # train G
 
                 FreezeModel(self.Discriminator)
@@ -405,29 +405,36 @@ class Translator(GAN_Trainer):
                 imgs0, imgs1 = data[0][0], data[0][1]
                 i += 1
 
-                imgs0      = imgs0.to(self.device)
-                imgs1      = imgs1.to(self.device)
-                imgs1_fake = self.Generator(imgs0)
-                self.fake_imgs = imgs1_fake
-                fake_cat = torch.cat([imgs0, imgs1_fake], dim=1)
+                imgs0 = imgs0.to(self.device)
+                imgs1 = imgs1.to(self.device)
 
-                self.g_loss = -self.Discriminator(fake_cat).mean()
-
-                l1_loss = self.percep_loss(imgs1_fake, imgs1)
-                l1_loss = l1_loss * self.schedule['loss_params']['l1_lambda']
-
-                combined_loss = self.g_loss + l1_loss
-                combined_loss.backward()
+                if all_meta:
+                    for i in range(bands):
+                        input_feed = self.band_select(imgs0, i)
+                        target_feed = self.band_select(imgs1, i)
+                        g_loss, l1_loss = iter_generator(
+                            self.Generator.networks[i],
+                            self.Discriminator.networks[i],
+                            self.percep_loss,
+                            input_feed,
+                            target_feed,
+                            self.schedule['loss_params']['l1_lambda'])
+                else:
+                    g_loss, l1_loss = iter_generator(
+                        self.Generator, self.Discriminator,
+                        self.percep_loss, imgs0, imgs1,
+                        self.schedule['loss_params']['l1_lambda'])
 
                 self.g_optimizer.step()
 
+                # Collect stats
                 self.gen_iterations += 1
-
-
+                _d_loss_real = np.mean(_d_loss_real)
+                _d_loss_fake = np.mean(_d_loss_fake)
+                self.running_d_loss.append(np.mean(_running_d_loss))
                 self.running_g_loss.append(
-                    self.g_loss.data.cpu().numpy() + l1_loss.data.cpu().numpy()
+                    g_loss + l1_loss
                 )
-
 
                 self.clear_if(self.gen_iterations)
 
@@ -435,21 +442,22 @@ class Translator(GAN_Trainer):
                              self.epoch,
                              d_real=_d_loss_real,
                              d_fake=_d_loss_fake,
-                             adv_loss=self.g_loss.data.cpu().numpy(),
-                             percep_loss=l1_loss.data.cpu().numpy())
+                             adv_loss=g_loss,
+                             percep_loss=l1_loss)
 
                 self.loss_if(self.gen_iterations,
                              self.running_d_loss,
                              self.running_g_loss,
                              med=True)
 
+                '''
                 self.plot_if(self.gen_iterations, [
                     imgs0,
                     imgs1,
                     imgs1_fake
                 ], n=2)
+                '''
 
                 self.summary_if_iter(self.gen_iterations, self._gen_iterations)
 
                 torch.cuda.empty_cache()
-

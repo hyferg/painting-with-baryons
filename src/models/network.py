@@ -15,9 +15,10 @@ class Network(nn.Module):
         _translator_types = ['resnet_translator']
         if network_structure.get('bands') is not None:
             bands = network_structure['bands']
-            network_structure.pop('bands')
+            subnet = copy.copy(network_structure)
+            subnet.pop('bands')
             print(' -> Meta Network')
-            return MetaNet(network_structure, bands)
+            return MetaNet(subnet, bands)
         elif (network_structure['type'] in _dcgan_types or
               network_structure['type'] in _translator_types):
             network = CNN.factory(network_structure)
@@ -98,22 +99,23 @@ class Network(nn.Module):
         return nn.Sequential(_layer_stack)
 
 
-class MetaNet(nn.Module):
+class MetaNet(Network):
     def __init__(self, network_structure, bands):
         super(MetaNet, self).__init__()
         self.networks = nn.ModuleList()
         self.network_structure = network_structure
+        self.type = 'meta-network'
+        self.bands = bands
         for band in range(bands):
             self.networks.append(
                 Network.factory(network_structure)
             )
-    def forward(self, split_img):
-        print(f'split shape {split_img.shape}')
-        for i, img_band in enumerate(split_img):
-            split_img[i] = self.networks[i](img_band)
-        print(split_img.shape)
-        raise
-        return split_img
+    def forward(self, x):
+        assert x.shape[1] == self.bands
+        for i, split_img in enumerate(x):
+            for j, img in enumerate(split_img):
+                x[i][j] = self.networks[j](img.view(1, 1, *img.shape))
+        return x
 
 
 class CNN(Network):
