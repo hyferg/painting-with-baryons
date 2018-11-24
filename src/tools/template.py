@@ -88,17 +88,17 @@ class GAN_Painter(Painter):
         for i in range(batch_size):
             img, idx = next(self.test_iter)
             z = self.test_dataset.sample_idx_to_redshift(idx)
-            inputs[i] = img[0]
-            outputs[i] = img[1]
-            painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats)
-            idxs.append(idx)
+            inputs[i] = img[0].numpy()
+            outputs[i] = img[1].numpy()
+            painted[i] = self.paint(img[0].numpy(), z=z, stats=self.test_dataset.stats)
+            idxs.append(idx.numpy())
 
         return [x.squeeze() for x in [inputs, outputs, painted]] + [idxs]
 
     def validate_transforms(self, data, fields, stats, idxs):
         for i, imgs in enumerate(data):
             for j, img in enumerate(imgs):
-                z = self.test_dataset.sample_idx_to_redshift(idxs[j])
+                z = self.test_dataset.sample_idx_to_redshift(idxs[j])[0]
                 transformed_img = self.transform(img,
                                                  field=fields[i],
                                                  z=z, stats=stats)

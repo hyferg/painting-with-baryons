@@ -1,4 +1,5 @@
-* Round
+* DONE Round
+  CLOSED: [2018-11-24 Sat 16:44]
   1. 
   2. 
   3. 
@@ -21,8 +22,71 @@
       2. k=9 slower lr
       3. k=0.5
   16. Redo of 10
-      1. with exponential deacy
+      1. with exponential deacy (fc transform)
       2. same as #1 but with 10 iters for decay
       3. now using Troster range compress
+      4. #2 with 5 iters for decay and no range compress
+         - the transform is bad as it does not consider the negative values of dm and this is likely the source of the instability
+      5. #3 with 5 iters for decay TODO
+         - pixel distribution on iter 0-1 is centered and smooth
+         - it quickly sticks to +- 1 on the activation function
+         - other trials recover from this eventuall
+         - some approach to have a smoother start may be better than having to wait to recover
+      6. # 5 with plots for early iterations to observe when blowout happens as a control
+         - it blows out after 1-2 iterations
+      7. # 5 with order magnitude smaller lr
+         - after iter 2 both functions are still primarily under-correlated
+         - on iter 3 the functions over-correlate
+      8. # 5 with 2x order of magnitude smaller lr
+         - inversion on iter 2
+      9. # 5 with 2e-6 lr and 8 batch size
+         - inversion on iter 2
+      10. # 5 with 8 batch size and 1000 l1_lambda
+      11. # 10 iwth 2e-6 lr
   17. meta resnet
-      1. split frequency then transform to [-1, 1]
+      1. [split, range] bad closure
+         - looks good at 1 iter
+      2. [range, split] ? closure
+         - no lines?
+      3. [fcs, split] good closure
+         - trainable
+      4. [split, fcs] bad closure
+  18. vanilla redo
+      1. fcs no range compress, <10 iter to decay
+      2. troster <10 iter to decay
+* ALT
+  - null_tests
+    - apply_init: no changes
+      - has pixeldist dirac delta at around x=0 for iter 0
+      - inversion to boundry sticking and 1e9 auto correlation on iter 2
+      - note: lambda is 1000 and may bound the autocorrelation
+    - no_apply_init: comment out weight_init from boilerplate.py
+      - explodes to 1e18 auto correlation on 3rd iter
+      - pixel dist on iter 0 has no fake values in range [-1, 1]
+    - apply_xavier
+      - lr: 2e-4
+      - batch: 8
+      - decay iter: 5
+      - extreemly stable power curves over first 10 iterations. pixel distribution clumps to [-1, -0.5] and slowly shifts baseline to match real tail end
+      - no observation of HF correlation peak in first 10 iters
+      - decay too high or lr too low as by 50 iters there is not much change
+    - apply_kai
+      - lr: 2e-4
+      - batch: 4
+      - decay iter: 50
+      - pixel dist is stuck to +-1 on iteration 0
+      - very high correlation by iter 1-2
+    - apply_kai_lower
+      - lr: 2e-4
+      - batch: 8
+      - decay iter: 5
+      - still blows up, cross fractional distances appear to be normally distributed albeit very large
+    - apply_xavier_faster
+      - lr: 2e-4
+      - batch: 4
+      - decay iter: 50
+      - the pixeldist seems to be confined to [-1, 0]
+* TODO
+  - [X] r16r004
+  - [X] r16r005
+  - [ ] 

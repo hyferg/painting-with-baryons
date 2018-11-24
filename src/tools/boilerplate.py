@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from src.models.network import Network
 from src.models.trainer import Trainer
 from src.tools.schedule import ScheduleLoader
-from src.tools.weights import FreezeModel, UnFreezeModel, weights_init
+from src.tools.weights import FreezeModel, UnFreezeModel, init_weights
 from baryon_painter.utils.datasets import BAHAMASDataset
 
 def files_info(data_path):
@@ -25,8 +25,17 @@ class boiler(object):
         generator = Network.factory(g_struc)
         discriminator = Network.factory(d_struc)
 
-        generator.apply(weights_init)
-        discriminator.apply(weights_init)
+        if 'g_init' not in schedule:
+            schedule['g_init'] = {
+                'init_type': 'xavier'
+            }
+        if 'd_init' not in schedule:
+            schedule['d_init'] = {
+                'init_type': 'xavier'
+            }
+
+        init_weights(generator, **schedule['g_init'])
+        init_weights(discriminator, **schedule['d_init'])
 
         s = ScheduleLoader(schedule)
 

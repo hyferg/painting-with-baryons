@@ -203,8 +203,8 @@ class Translator(GAN_Trainer):
     def summary_save(self, n_iter, idxs=None):
         with torch.no_grad():
             self.Generator.eval()
-            self.Generator.save_self(self.schedule['save_dir'] + '/parts/g_{}_iter.cp'.format('n_iter'))
-            self.Discriminator.save_self(self.schedule['save_dir'] + '/d_{}_iter.cp'.format('n_iter'))
+            self.Generator.save_self(self.schedule['save_dir'] + '/parts/g_{}_iter.cp'.format(n_iter))
+            self.Discriminator.save_self(self.schedule['save_dir'] + '/d_{}_iter.cp'.format(n_iter))
             data = next(self.test_iter)
             idxs = data[1]
             imgs0, imgs1 = data[0][0], data[0][1]
@@ -240,12 +240,13 @@ class Translator(GAN_Trainer):
                 save_path=(self.save_path_meta + 'm_{}_n_iter.png'.format(n_iter)),
                 debug=True
             )
-            LossShow(
-                self.running_d_loss,
-                self.running_g_loss,
-                save=True,
-                save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
-            )
+            if any(self.running_d_loss):
+                LossShow(
+                    self.running_d_loss,
+                    self.running_g_loss,
+                    save=True,
+                    save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
+                )
             self.Generator.train()
 
     def summary_if_iter(self, n_iter, _n_iter):
@@ -327,11 +328,12 @@ class Translator(GAN_Trainer):
         all_meta, bands = self.check_networks(
             [self.Discriminator, self.Generator]
         )
+        self.test_iter = iter(self.testloader)
+        self.summary_save(0)
         for epoch in range(self.schedule['epochs']):
             self.epoch += 1
             i = 0
             data_iter = iter(self.dataloader)
-            self.test_iter = iter(self.testloader)
             while i < len(self.dataloader):
 
                 print(self.gen_iterations)
