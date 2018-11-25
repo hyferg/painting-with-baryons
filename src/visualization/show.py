@@ -10,9 +10,12 @@ def LossShow(d_loss, g_loss, save=False, med=True, nmed=101, save_path=None):
     fig = plt.figure(figsize=(16,16))
 
     ax1 = plt.subplot(2,2,1)
-    ax1.set_title('D loss: {}'.format(d_loss[-1]))
-    if med: ax1plt = signal.medfilt(d_loss, nmed)
-    else: ax1plt = d_loss
+    ax1.set_title('D loss (absolute): {}'.format(d_loss[-1]))
+    if med:
+        ax1plt = signal.medfilt(d_loss, nmed)
+    else:
+        ax1plt = d_loss
+    ax1plt = np.absolute(ax1plt)
     ax1.set_yscale('log')
     ax1.plot(np.arange(len(ax1plt)), ax1plt, color='blue', marker='o', linewidth=0)
 

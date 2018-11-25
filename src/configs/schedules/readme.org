@@ -86,6 +86,21 @@
       - batch: 4
       - decay iter: 50
       - the pixeldist seems to be confined to [-1, 0]
+    - apply_kai_002
+      - kai with 10 iter for decay and 2e5 l1 lambda rather than 1000
+    - apply_kai_003
+      - kai with 10 iter for decay and 1000 l1_lambda
+    - apply_kai_004
+      - with 25 iter for decay and 2e5 l1 lambda
+    - apply_kai_005
+      - 10 iter decay and 2e7 l1 lambda
+      - best yet!
+    - apply_kai_006
+      - 10 iter decay and 2e8 lambda
+    - apply_kai_007
+      - batch 8
+      - 10 iter
+      - 2e7 l1 lambda
 * TODO
   - [X] r16r004
   - [X] r16r005

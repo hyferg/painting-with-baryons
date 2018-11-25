@@ -81,7 +81,7 @@ class Trainer():
 
             print('epoch: {}/{}'.format(epoch, self.schedule['epochs']))
             print('d-real: {}\nd-fake: {}'.format(d_real, d_fake))
-            print('g-adv: {} \ng-percep: {}'.format(adv_loss, percep_loss))
+            print('g-adv: {} \ng-percep: {} [{}]'.format(adv_loss, percep_loss, percep_loss/self.schedule['loss_params']['l1_lambda']))
             for param_group in self.g_optimizer.param_groups:
                 print('g lr {}'.format(param_group['lr']))
             for param_group in self.d_optimizer.param_groups:
@@ -245,6 +245,7 @@ class Translator(GAN_Trainer):
                     self.running_d_loss,
                     self.running_g_loss,
                     save=True,
+                    nmed=21,
                     save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
                 )
             self.Generator.train()
@@ -321,6 +322,13 @@ class Translator(GAN_Trainer):
     def band_select(self, imgs, idx):
         return imgs[:, idx, :, :].unsqueeze(1)
 
+    def break_if(self, n_iter):
+        if 'iter_break' in self.schedule:
+            if n_iter >= self.schedule['iter_break']:
+                return True
+        else:
+            return False
+
     def wgp_iter(self):
         self.Generator.train()
         self.gen_iterations = 0
@@ -331,6 +339,8 @@ class Translator(GAN_Trainer):
         self.test_iter = iter(self.testloader)
         self.summary_save(0)
         for epoch in range(self.schedule['epochs']):
+            if self.break_if(self.gen_iterations):
+                break
             self.epoch += 1
             i = 0
             data_iter = iter(self.dataloader)
@@ -463,3 +473,5 @@ class Translator(GAN_Trainer):
                 self.summary_if_iter(self.gen_iterations, self._gen_iterations)
 
                 torch.cuda.empty_cache()
+                if self.break_if(self.gen_iterations):
+                    break
