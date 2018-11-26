@@ -100,7 +100,15 @@
     - apply_kai_007
       - batch 8
       - 10 iter
-      - 2e7 l1 lambda
+      - 2e8 l1 lambda
+    - apply_kai_008
+      - batch 4, decay 5, l1 2e7
+    - apply_kai_009
+      - batch 4, decay 10, l1 2e7, dmk 1.5, prk 1.75
+    - apply_kai_010
+      - batch 4, decay 10, l1 2e7, dmk 1.5, prk 1.75, and bounded pressure [-1, 0.75]
+    - apply_kai_011
+      - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75
 * TODO
   - [X] r16r004
   - [X] r16r005

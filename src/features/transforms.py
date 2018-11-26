@@ -2,6 +2,48 @@ import numpy as np
 import torch
 from torchvision import transforms
 
+def create_range_compress_transforms(k_values, modes="log", scale=1, delta=0):
+    def interpolate_z(stats, z):
+        """Interpolate statisitcs dict to redshift z."""
+        z_list = list(stats.keys())
+        idx = np.searchsorted(z_list, z, side="right")
+        if idx >= len(z_list):
+            return stats[z_list[-1]]
+        elif idx <= 0:
+            return stats[z_list[0]]
+        w = (z - z_list[idx-1])/(z_list[idx]-z_list[idx-1])
+        stats_names = stats[z_list[0]].keys()
+        intp_stats = {s : w*stats[z_list[idx]][s] + (1-w)*stats[z_list[idx-1]][s] for s in stats_names}
+
+        return intp_stats
+
+    def transform(x, field, z, stats):
+        k = k_values[field]
+        mode = modes[field]
+        mean = np.sqrt(interpolate_z(stats[field], z)["mean"])
+        std = np.sqrt(interpolate_z(stats[field], z)["var"])
+        if mode.lower() == "log":
+            return np.where(x > 0, np.tanh(np.log(x/std)/k)*scale - delta, -1)
+        elif mode.lower() == "x/(1+x)":
+            return np.where(x+mean*k>0, np.tanh(x/(x+mean*k)), -1)
+        else:
+             raise ValueError(f"Mode '{mode}' not supported.")               
+    
+    def inv_transform(x, field, z, stats):
+        k = k_values[field]
+        mode = modes[field]
+        mean = np.sqrt(interpolate_z(stats[field], z)["mean"])
+        std = np.sqrt(interpolate_z(stats[field], z)["var"])
+        if mode.lower() == "log":
+            return np.where(x > -1, np.exp(np.arctanh((x+delta)/scale)*k)*std, 0)
+        elif mode.lower() == "x/(1+x)":
+            return np.where(x > -1, mean*k/(1/np.arctanh(x)-1), -mean*k)
+        else:
+             raise ValueError(f"Mode '{mode}' not supported.")   
+    
+    return transform, inv_transform 
+
+
 
 class ChainTransformations:
     def __init__(self, transformations):
