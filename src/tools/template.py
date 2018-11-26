@@ -23,8 +23,6 @@ class GAN_Painter(Painter):
                  label_fields=['pressure'],
     ):
 
-        with open(parts_folder + structure_file, 'rb') as handle:
-            g_struc = pickle.load(handle)
 
         self.compute_device = device
         self.input_field = input_field
@@ -34,8 +32,11 @@ class GAN_Painter(Painter):
         self.inv_transform = None
         self.test_data = None
 
+        with open(parts_folder + structure_file, 'rb') as handle:
+            g_struc = torch.load(handle, map_location=torch.device(self.compute_device))
+
         self.generator = Network.factory(g_struc)
-        self.load_state_from_file(parts_folder + checkpoint_file)
+        self.load_state_from_file(parts_folder + checkpoint_file, self.compute_device)
 
         if transform_file:
             with open(parts_folder + transform_file, 'rb') as handle:
@@ -45,8 +46,8 @@ class GAN_Painter(Painter):
             with open(parts_folder + inv_transform_file, 'rb') as handle:
                 self.inv_transform = pickle.load(handle)
 
-    def load_state_from_file(self, filename):
-        self.generator.load_self(filename)
+    def load_state_from_file(self, filename, device):
+        self.generator.load_self(filename, device)
         self.generator.to(self.compute_device)
 
     def paint(self, input, z=0.0, stats=None, inverse_transform=True):

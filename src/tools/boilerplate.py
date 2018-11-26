@@ -22,6 +22,15 @@ class boiler(object):
         if device == None:
             device = str(input('device: '))
 
+        with open(s.schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
+            pickle.dump(g_struc, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(s.schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
+            dill.dump(s.schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(s.schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
+            dill.dump(s.schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
         generator = Network.factory(g_struc)
         discriminator = Network.factory(d_struc)
 
@@ -90,14 +99,6 @@ class boiler(object):
         _sch = open(s.schedule['save_dir'] + 'schedule.txt', 'w+')
         _sch.write(s.schedule.__repr__())
 
-        with open(s.schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
-            pickle.dump(g_struc, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(s.schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
-            dill.dump(s.schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(s.schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
-            dill.dump(s.schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         _gen.close()
         _dis.close()

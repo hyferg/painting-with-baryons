@@ -55,15 +55,12 @@ class Network(nn.Module):
         torch.save(self.state_dict(), PATH)
 
 
-    def load_self(self, PATH, force_cpu=False):
-        if force_cpu:
-            self.load_state_dict(
-                torch.load(
-                    PATH, map_location=lambda storage, location: storage
-                ),
-            )
-        else:
-            self.load_state_dict(torch.load(PATH))
+    def load_self(self, PATH, device):
+        self.load_state_dict(
+            torch.load(
+                PATH, map_location=torch.device(device)
+            ),
+        )
 
 
     def _build_linear_stack(self, layer_stack):
