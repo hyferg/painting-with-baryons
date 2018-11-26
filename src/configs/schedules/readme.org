@@ -106,9 +106,13 @@
     - apply_kai_009
       - batch 4, decay 10, l1 2e7, dmk 1.5, prk 1.75
     - apply_kai_010
-      - batch 4, decay 10, l1 2e7, dmk 1.5, prk 1.75, and bounded pressure [-1, 0.75]
+      - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75, and bounded pressure [-1, 0.75]
     - apply_kai_011
       - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75
+    - apply_kai_012
+      - batch 4, decay 5, l1 2e7, decaygamma 0.90
+    - apply_kai_013
+      - batch 4, decay 5, l1 2e6, decaygamma 0.95
 * TODO
   - [X] r16r004
   - [X] r16r005
