@@ -1,6 +1,7 @@
 import os
 import pickle
 import dill
+import torch
 from torch.utils.data import DataLoader
 from src.models.network import Network
 from src.models.trainer import Trainer
@@ -22,14 +23,18 @@ class boiler(object):
         if device == None:
             device = str(input('device: '))
 
-        with open(s.schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
-            pickle.dump(g_struc, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with open(s.schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
-            dill.dump(s.schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+        os.makedirs(schedule['save_dir'], exist_ok=True)
+        os.makedirs(schedule['save_dir'] + '/parts/', exist_ok=True)
 
-        with open(s.schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
-            dill.dump(s.schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
+            torch.save(g_struc, handle)
+
+        with open(schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
+            dill.dump(schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
+            dill.dump(schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         generator = Network.factory(g_struc)
         discriminator = Network.factory(d_struc)
@@ -84,8 +89,6 @@ class boiler(object):
                                        dataset=test_dataset)
 
 
-        os.makedirs(s.schedule['save_dir'], exist_ok=True)
-        os.makedirs(s.schedule['save_dir'] + '/parts/', exist_ok=True)
 
         print(generator)
         print(discriminator)
