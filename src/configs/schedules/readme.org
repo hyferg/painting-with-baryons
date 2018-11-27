@@ -111,8 +111,20 @@
       - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75
     - apply_kai_012
       - batch 4, decay 5, l1 2e7, decaygamma 0.90
-    - apply_kai_013
+    - apply_kai_013 (very smooth)
       - batch 4, decay 5, l1 2e6, decaygamma 0.95
+    - apply_kai_014 (less smooth)
+      - batch4, decay 5, l1 2e6, decaygamma 0.98
+    - apply_kai_015 
+      - batch 4, decay 5, l1 1e6, decaygamma 0.95
+    - apply_kai_016
+      - batch 4, decay 5, l1 2e6, decaygamma 0.965
+    - apply_kai_017
+      - batch 4, decay 5, l1 2e6, decaygamma 0.95
+    - apply_kai_018
+      - batch 4, decay 7, l1 2e6, decaygamma 0.98
+    - apply_kai_019 
+      - batch 4, decay 7, l1 1e6, decaygamma 0.98
 * TODO
   - [X] r16r004
   - [X] r16r005

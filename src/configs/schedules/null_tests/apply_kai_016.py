@@ -32,13 +32,13 @@ inv_transform = chain_transformations([squeeze,
 schedule = Schedule(name)
 schedule['sample_interval'] = 100
 schedule['batch_size'] = 4
-schedule['decay_iter'] = 10
+schedule['decay_iter'] = 5
 schedule['g_optim_opts']['lr'] = 2e-4
 schedule['d_optim_opts']['lr'] = 2e-4
 schedule['save_summary']['iters'] = [25, 35] + np.arange(0, 350, 50).tolist() + np.arange(350, 10000, 100).tolist()
 
-schedule['loss_params']['l1_lambda'] = 1e6
-schedule['lrdecay_opts']['gamma'] = 0.95
+schedule['loss_params']['l1_lambda'] = 2e6
+schedule['lrdecay_opts']['gamma'] = 0.965
 
 
 schedule['g_init'] = {
@@ -48,7 +48,7 @@ schedule['d_init'] = {
     'init_type': 'kaiming',
 }
 
-schedule['iter_break'] = 10000
+schedule['iter_break'] = 2001
 
 schedule['transform'] = transform
 schedule['inv_transform'] = inv_transform

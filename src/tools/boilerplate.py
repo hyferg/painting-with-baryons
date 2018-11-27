@@ -18,10 +18,12 @@ def files_info(data_path):
     return training_files_info, test_files_info
 
 class boiler(object):
-    def __init__(self, g_struc, d_struc, schedule, device=None, data_path=None):
+    def __init__(self, g_struc, d_struc, schedule, device=None, data_path=None, pre_load=None):
 
         if device == None:
             device = str(input('device: '))
+        if pre_load is not None:
+            schedule['save_dir'] += '/extended/'
 
 
         os.makedirs(schedule['save_dir'], exist_ok=True)
@@ -80,6 +82,12 @@ class boiler(object):
         test_loader = DataLoader(
             test_dataset, batch_size=schedule['n_test'], shuffle=True)
 
+        if pre_load is not None:
+            generator.load_self(pre_load['g_path'], device)
+            discriminator.load_self(pre_load['d_path'], device)
+            s.schedule['g_optim_opts']['lr'] = pre_load['lr']
+            s.schedule['d_optim_opts']['lr'] = pre_load['lr']
+
         self.trainer = Trainer.factory(s.schedule,
                                        generator,
                                        discriminator,
@@ -87,6 +95,8 @@ class boiler(object):
                                        testloader=test_loader,
                                        device=device,
                                        dataset=test_dataset)
+
+
 
 
 

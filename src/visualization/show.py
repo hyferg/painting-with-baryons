@@ -27,13 +27,13 @@ def LossShow(d_loss, g_loss, save=False, med=True, nmed=101, save_path=None):
     ax2.plot(np.arange(len(ax2plt)),ax2plt, color='red', marker='o', linewidth=0)
 
     ax3 = plt.subplot(2,2,3)
-    ax3.set_title('D loss last 2k')
-    ax3plt = ax1plt[-2000:]
+    ax3.set_title('D loss last 500')
+    ax3plt = ax1plt[-500:]
     ax3.scatter(np.arange(len(ax3plt)), ax3plt, color='blue')
 
     ax4 = plt.subplot(2,2,4)
-    ax4.set_title('G loss last 2k')
-    ax4plt = ax2plt[-2000:]
+    ax4.set_title('G loss last 500')
+    ax4plt = ax2plt[-500:]
     ax4.scatter(np.arange(len(ax4plt)), ax4plt, color='red')
 
 
