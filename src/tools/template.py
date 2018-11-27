@@ -31,6 +31,9 @@ class GAN_Painter(Painter):
         self.transform = None
         self.inv_transform = None
         self.test_data = None
+        self.inputs = None
+        self.outputs = None
+        self.painted = None
 
         with open(parts_folder + structure_file, 'rb') as handle:
             g_struc = torch.load(handle, map_location=torch.device(self.compute_device))
@@ -81,7 +84,7 @@ class GAN_Painter(Painter):
 
         self.test_iter = iter(self.test_loader)
 
-    def get_batch(self, batch_size):
+    def get_batch(self, batch_size, inverse_transform=True):
         inputs = np.zeros((batch_size, *self.img_dim))
         outputs = np.zeros((batch_size, *self.img_dim))
         painted = np.zeros((batch_size, *self.img_dim))
@@ -89,12 +92,33 @@ class GAN_Painter(Painter):
         for i in range(batch_size):
             img, idx = next(self.test_iter)
             z = self.test_dataset.sample_idx_to_redshift(idx)
-            inputs[i] = img[0].numpy()
-            outputs[i] = img[1].numpy()
-            painted[i] = self.paint(img[0].numpy(), z=z, stats=self.test_dataset.stats)
+            if inverse_transform is False:
+                inputs[i] = self.transform(img[0].numpy(),
+                                           self.input_field, z=z,
+                                           stats=self.test_dataset.stats)
+                outputs[i] = self.transform(img[1].numpy(),
+                                            self.label_fields[0], z=z,
+                                            stats=self.test_dataset.stats)
+            else:
+                inputs[i] = img[0].numpy()
+                outputs[i] = img[1].numpy()
+            painted[i] = self.paint(img[0].numpy(), z=z, stats=self.test_dataset.stats,
+                                    inverse_transform=inverse_transform)
             idxs.append(idx.numpy())
 
         return [x.squeeze() for x in [inputs, outputs, painted]] + [idxs]
+
+    def get_self_batch(self, batch_size, **kwargs):
+        self.inputs, self.outputs, self.painted, idxs = self.get_batch(batch_size, **kwargs)
+
+    def plot_self(self, idx=0):
+        to_plot = [self.inputs, self.outputs, self.painted]
+        fig, axs = plt.subplots(1,3)
+        fig.set_size_inches(20, 10)
+        for i, img in enumerate(to_plot):
+            axs[i].imshow(img[idx])
+            axs[i].set_axis_off()
+
 
     def validate_transforms(self, data, fields, stats, idxs):
         for i, imgs in enumerate(data):
@@ -163,6 +187,7 @@ class GAN_Painter(Painter):
     def validate_batch(self, batch_size, box_size, n_k_bin=20, transform_closure=False):
         inputs, outputs, painted, idxs = self.get_batch(batch_size)
 
+        plt.imshow(painted[0])
         data = [inputs, outputs, painted]
         fields = ['dm', 'pressure', 'pressure']
         names = ['dm', 'pressure', 'painted pressure']

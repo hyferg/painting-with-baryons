@@ -179,7 +179,10 @@ class GAN_Trainer(Trainer):
     def loss_if(self, gen_iterations, d_loss, g_loss, save=False, med=True, nmed=101):
         if (gen_iterations % self.schedule['sample_interval'] == 0 |
            self.schedule['debug_plot']):
-            LossShow(d_loss, g_loss, save=save, med=med, nmed=nmed)
+            LossShow(d_loss, g_loss,
+                     g_percep=self.current_g_percep,
+                     g_adv=self.current_g_adv,
+                     save=save, med=med, nmed=nmed)
 
     def clear_if(self, gen_iterations):
         if (gen_iterations % self.schedule['sample_interval'] == 0 |
@@ -192,6 +195,8 @@ class Translator(GAN_Trainer):
                  device, testloader, **kwargs):
         self.running_g_loss = []
         self.running_d_loss = []
+        self.current_g_adv = 0
+        self.current_g_percep = 0
         self._epoch = 0
         self._gen_iterations = 0
         self.set_criterion()
@@ -244,6 +249,8 @@ class Translator(GAN_Trainer):
                 LossShow(
                     self.running_d_loss,
                     self.running_g_loss,
+                    g_percep=self.current_g_percep,
+                    g_adv=self.current_g_adv,
                     save=True,
                     nmed=21,
                     save_path=(self.save_path_loss + 'l_{}_n_iter.png'.format(n_iter))
@@ -439,6 +446,7 @@ class Translator(GAN_Trainer):
 
                 self.g_optimizer.step()
 
+
                 # Collect stats
                 self.gen_iterations += 1
                 _d_loss_real = np.mean(_d_loss_real)
@@ -447,6 +455,8 @@ class Translator(GAN_Trainer):
                 self.running_g_loss.append(
                     g_loss + l1_loss
                 )
+                self.current_g_adv = g_loss
+                self.current_g_percep = l1_loss
 
                 self.clear_if(self.gen_iterations)
 

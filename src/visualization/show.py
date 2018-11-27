@@ -6,7 +6,7 @@ from IPython import display
 import torch
 import scipy.signal as signal
 
-def LossShow(d_loss, g_loss, save=False, med=True, nmed=101, save_path=None):
+def LossShow(d_loss, g_loss, g_percep, g_adv, save=False, med=True, nmed=101, save_path=None):
     fig = plt.figure(figsize=(16,16))
 
     ax1 = plt.subplot(2,2,1)
@@ -20,7 +20,9 @@ def LossShow(d_loss, g_loss, save=False, med=True, nmed=101, save_path=None):
     ax1.plot(np.arange(len(ax1plt)), ax1plt, color='blue', marker='o', linewidth=0)
 
     ax2 = plt.subplot(2,2,2)
-    ax2.set_title('G Loss: {}'.format(g_loss[-1]))
+    ax2.set_title('G [total: {}] [percep: {}] [adv: {}]'.format(
+        g_loss[-1], g_percep, g_adv
+    ))
     if med: ax2plt = signal.medfilt(g_loss, nmed)
     else: ax2plt = g_loss
     ax2.set_yscale('log')

@@ -170,6 +170,10 @@ class CNN(Network):
                     nn.ConvTranspose2d(**_opts)
                 )
 
+            if 'init_type' in filter:
+                if filter['init_type'] == 'xavier':
+                    _filter[-1].init_type = 'xavier'
+
             if filter['pre_batch_norm']:
                 _filter.append(filter['pre_batch_norm'])
 

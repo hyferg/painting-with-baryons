@@ -24,6 +24,14 @@ def init_weights(net, init_type='normal', gain=0.02):
             init.normal_(m.weight.data, 1.0, gain)
             init.constant_(m.bias.data, 0.0)
 
+
+        if hasattr(m, 'init_type'):
+            print('init type found')
+            if m.init_type is 'xavier':
+                init.xavier_normal_(m.weight.data, gain=gain)
+                print('selective xavier applied once')
+
+
     print('initialize network with %s' % init_type)
     net.apply(init_func)
 

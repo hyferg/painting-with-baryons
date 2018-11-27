@@ -92,15 +92,16 @@
       - kai with 10 iter for decay and 1000 l1_lambda
     - apply_kai_004
       - with 25 iter for decay and 2e5 l1 lambda
-    - apply_kai_005
+    - apply_kai_005 (less lower mode collapse) #TODO
       - 10 iter decay and 2e7 l1 lambda
       - best yet!
-    - apply_kai_006
+    - apply_kai_006 (less lower mode collapse) #TODO
       - 10 iter decay and 2e8 lambda
-    - apply_kai_007
+    - apply_kai_007 (less lower mode collapse) #TODO
       - batch 8
       - 10 iter
       - 2e8 l1 lambda
+      - 1400 looks good
     - apply_kai_008
       - batch 4, decay 5, l1 2e7
     - apply_kai_009
@@ -109,11 +110,11 @@
       - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75, and bounded pressure [-1, 0.75]
     - apply_kai_011
       - batch 4, decay 10, l1 2e5, dmk 1.5, prk 1.75
-    - apply_kai_012
+    - apply_kai_012 (less lower mode collapse) #TODO
       - batch 4, decay 5, l1 2e7, decaygamma 0.90
     - apply_kai_013 (very smooth)
       - batch 4, decay 5, l1 2e6, decaygamma 0.95
-    - apply_kai_014 (less smooth)
+    - apply_kai_014 (less smooth) (less lower mode collapse) #TODO
       - batch4, decay 5, l1 2e6, decaygamma 0.98
     - apply_kai_015 
       - batch 4, decay 5, l1 1e6, decaygamma 0.95
@@ -124,7 +125,11 @@
     - apply_kai_018
       - batch 4, decay 7, l1 2e6, decaygamma 0.98
     - apply_kai_019 
-      - batch 4, decay 7, l1 1e6, decaygamma 0.98
+      - batch 4, decay 7, l1 2e6, decaygamma 0.98, lr 2e-7
+      - too slow
+    - apply_kai_020
+      - xai on tanh from now onward
+      - batch 4, decay 7, l1 2e6, decaygamma 0.98, lr 2e-6
 * TODO
   - [X] r16r004
   - [X] r16r005
