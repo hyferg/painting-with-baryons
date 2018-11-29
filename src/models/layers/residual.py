@@ -6,6 +6,7 @@ class ResBlock(nn.Module):
                  input_shape,
                  kernel_size=(3,3),
                  activation=nn.ReLU,
+                 acti_params = {'inplace': True},
                  norm=nn.BatchNorm2d,
                  bias=False,
                  clip = False,
@@ -14,6 +15,7 @@ class ResBlock(nn.Module):
         self.input_shape = input_shape
         self.kernel_size = kernel_size
         self.activation = activation
+        self.acti_params = acti_params
         self.norm = norm
         self.clip = clip
         self.clip_val = clip_val
@@ -39,7 +41,7 @@ class ResBlock(nn.Module):
                               self.norm(self.channels))
 
         self.stack.add_module('Acti-1',
-                              self.activation(self.channels))
+                              self.activation(**self.acti_params))
 
         self.stack.add_module('Conv-2',
                               nn.Conv2d(self.channels, self.channels,
@@ -65,6 +67,7 @@ class ResBlocks(nn.Module):
                  n_blocks=1,
                  kernel_size=(3,3),
                  activation=nn.ReLU,
+                 acti_params={},
                  norm=nn.BatchNorm2d,
                  clip=False,
                  clip_val=0):
@@ -74,6 +77,8 @@ class ResBlocks(nn.Module):
         self.input_shape = input_shape
         self.n_blocks = n_blocks
         self.kernel_size = kernel_size
+        self.activation = activation
+        self.acti_params = acti_params
         self.clip = clip
         self.clip_val = clip_val
         self.network = nn.Sequential()
@@ -85,7 +90,9 @@ class ResBlocks(nn.Module):
             self.network.add_module(
                 'res-{}'.format(i+1),
                 ResBlock(self.input_shape, self.kernel_size, clip=self.clip,
-                         clip_val=self.clip_val))
+                         clip_val=self.clip_val,
+                         activation=self.activation,
+                         acti_params=self.acti_params))
 
     def forward(self, x):
         return self.network(x)

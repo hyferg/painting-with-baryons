@@ -8,16 +8,25 @@ def init_weights(net, init_type='normal', gain=0.02):
     def init_func(m):
         classname = m.__class__.__name__
         if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-            if init_type == 'normal':
-                init.normal_(m.weight.data, 0.0, gain)
-            elif init_type == 'xavier':
-                init.xavier_normal_(m.weight.data, gain=gain)
-            elif init_type == 'kaiming':
-                init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-            elif init_type == 'orthogonal':
-                init.orthogonal_(m.weight.data, gain=gain)
+
+            # Selective weight initilization added by Cameron
+            if hasattr(m, 'init_type'):
+                print('init type found')
+                if m.init_type is 'xavier':
+                    init.xavier_normal_(m.weight.data, gain=m.init_gain)
+                    print(f'selective xavier applied once with gain {m.init_gain}')
+
             else:
-                raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
+                if init_type == 'normal':
+                    init.normal_(m.weight.data, 0.0, gain)
+                elif init_type == 'xavier':
+                    init.xavier_normal_(m.weight.data, gain=gain)
+                elif init_type == 'kaiming':
+                    init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
+                elif init_type == 'orthogonal':
+                    init.orthogonal_(m.weight.data, gain=gain)
+                else:
+                    raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find('BatchNorm2d') != -1:
@@ -25,11 +34,6 @@ def init_weights(net, init_type='normal', gain=0.02):
             init.constant_(m.bias.data, 0.0)
 
 
-        if hasattr(m, 'init_type'):
-            print('init type found')
-            if m.init_type is 'xavier':
-                init.xavier_normal_(m.weight.data, gain=gain)
-                print('selective xavier applied once')
 
 
     print('initialize network with %s' % init_type)

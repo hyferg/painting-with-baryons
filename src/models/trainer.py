@@ -358,10 +358,15 @@ class Translator(GAN_Trainer):
 
                 self.decay_if_iter(self.gen_iterations)
 
+                if 'n_warm' in self.schedule:
+                    n_warm = self.schedule['n_warm']
+                else:
+                    n_warm = 25
+
                 try:
                     self.schedule['warm_start']
                     if self.schedule['warm_start'] is True:
-                        if self.gen_iterations < 25 or \
+                        if self.gen_iterations < n_warm or \
                            self.gen_iterations % 500 == 0:
                             Diters = 25
                         else:

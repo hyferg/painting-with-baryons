@@ -83,6 +83,7 @@ g_structure = {
             {
                 'type': 'normal',
                 'init_type': 'xavier',
+                'gain': 0.02
                 'out_channels': IMAGE_DIMENSIONS[0],
                 'kernel_size': 9,
                 'stride': 1,

@@ -20,6 +20,9 @@ def files_info(data_path):
 class boiler(object):
     def __init__(self, g_struc, d_struc, schedule, device=None, data_path=None, pre_load=None):
 
+        '''
+        pre_load {g_path, d_path, lr}
+        '''
         if device == None:
             device = str(input('device: '))
         if pre_load is not None:

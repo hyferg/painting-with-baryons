@@ -127,10 +127,107 @@
     - apply_kai_019 
       - batch 4, decay 7, l1 2e6, decaygamma 0.98, lr 2e-7
       - too slow
-    - apply_kai_020
+    - apply_kai_020: stable loss, stable dist
       - xai on tanh from now onward
       - batch 4, decay 7, l1 2e6, decaygamma 0.98, lr 2e-6
-* TODO
-  - [X] r16r004
-  - [X] r16r005
-  - [ ] 
+    - apply_kai_021 ?? only 5 iters
+      - batch 4, decay 7, l1 1, decaygamma 0.98, lr 2e-7
+    - apply_kai_022 loss spikes, dist sticks
+      - batch 4, decay 7, l1 1, decaygamma 0.98, lr 2e-4
+    - apply_kai_023 loss spikes, dist sticks
+      - batch 4, decay 7, l1 1000, decaygamma 0.98, lr 2e-4
+    - apply_kai_024
+      - batch 4, decay 7 l1 10, decaygamma 0.98, lr 1e-5
+    - apply_kai_025
+      - batch 4, decay 10 l1 100, decaygamma 0.98, lr 1e-5
+    - apply_kai_026
+      - batch 4, decay 10 l1 1000, decaygamma 0.98, lr 1e-6
+    - apply_kai_027
+      - batch 4, decay 25 l1 100, decaygamma 0.98, lr 1e-5
+    - apply_kai_028
+      - batch 4, decay 20 l1 1e3, grad 1e3 decaygamma 0.98, lr 5e-6
+    - apply_kai_029
+      - batch 4, decay 55 l1 1e3, grad 1e3 decaygamma 0.98, lr 1e-8
+    - apply_kai_030
+      - batch 4, decay 55 l1 1, grad 10 decaygamma 0.98, lr 1e-8
+    - apply_kai_031
+      - batch 4, decay 55 l1 1, grad 10 decaygamma 0.98, lr 5e-6
+    - apply_kai_031
+      - batch 4, decay 55 l1 1, grad 10 decaygamma 0.98, lr 5e-6
+* Null
+** Notes
+   - gain on xavier init try 1 note 0.02
+   - leakyrelu generator and leaky slope
+** Tests
+    kai null ??
+       stock leaky generator
+   1. kai gain
+      - xavier gain 1
+      - non-leaky generator
+   2. kai gain (very good!)
+      - xavier gain 0.2
+      - 2e-4
+   3. kai gain
+      - xavier gain 0.2
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 1000
+      - grad 10
+   4. kai gain BAD GRAD LAMBDA #TODO
+      - xavier gain 0.3
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 10
+      - grad 1e3
+   5. kai gain BAD GRAD LAMBDA #TODO
+      - xavier gain 0.3
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 10
+      - grad 1e3
+      - n_warm 50
+   6. kai gain BAD GRAD LAMBDA #TODO
+      - xavier gain 0.3
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 10
+      - grad 1e3
+      - n_warm 50
+      - GENERATOR BIAS
+   7. kai gain BAD GRAD LAMBDA #TODO
+      - xavier gain 0.3
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 1e3
+      - grad 100
+      - n_warm 50
+      - GENERATOR BIAS
+      - 1 resblock
+   8. kai gain
+      - xavier gain 0.5
+      - xavier leaky
+      - 2e-5 decay 25
+      - l1 1e3
+      - grad 10
+      - n_warm 50
+      - GENERATOR BIAS
+      - 1 resblock
+   9. kai gain
+      - xavier leaky
+      - 5e-6 decay 25
+      - l1 1e3
+      - grad 1e3
+      - n_warm 50
+      - GENERATOR BIAS
+      - 1 resblock
+       - gain 0.75
+   10. kai gain
+       - xavier leaky
+       - 5e-6 decay 25
+       - l1 1e3
+       - grad 1e3
+       - n_warm 100
+       - d_iters 10
+       - GENERATOR BIAS
+       - 1 resblock
+       - gain 0.8

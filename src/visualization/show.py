@@ -10,32 +10,35 @@ def LossShow(d_loss, g_loss, g_percep, g_adv, save=False, med=True, nmed=101, sa
     fig = plt.figure(figsize=(16,16))
 
     ax1 = plt.subplot(2,2,1)
-    ax1.set_title('D loss (absolute): {}'.format(d_loss[-1]))
+    ax1.set_title('D loss (absolute-val log-scale): {}'.format(d_loss[-1]))
     if med:
         ax1plt = signal.medfilt(d_loss, nmed)
     else:
         ax1plt = d_loss
-    ax1plt = np.absolute(ax1plt)
+    _ax1plt = np.absolute(ax1plt)
     ax1.set_yscale('log')
-    ax1.plot(np.arange(len(ax1plt)), ax1plt, color='blue', marker='o', linewidth=0)
+    ax1.plot(np.arange(len(ax1plt)), _ax1plt, color='blue', marker='o', linewidth=0)
 
     ax2 = plt.subplot(2,2,2)
-    ax2.set_title('G [total: {}] [percep: {}] [adv: {}]'.format(
+    ax2.set_title('G loss (absolute-val log-scale)\n[total: {}] [percep: {}] [adv: {}]'.format(
         g_loss[-1], g_percep, g_adv
     ))
-    if med: ax2plt = signal.medfilt(g_loss, nmed)
-    else: ax2plt = g_loss
+    if med:
+        ax2plt = signal.medfilt(g_loss, nmed)
+    else:
+        ax2plt = g_loss
+    _ax2plt = np.absolute(ax2plt)
     ax2.set_yscale('log')
-    ax2.plot(np.arange(len(ax2plt)),ax2plt, color='red', marker='o', linewidth=0)
+    ax2.plot(np.arange(len(ax2plt)), _ax2plt, color='red', marker='o', linewidth=0)
 
     ax3 = plt.subplot(2,2,3)
-    ax3.set_title('D loss last 500')
-    ax3plt = ax1plt[-500:]
+    ax3.set_title('D loss last 2000 g iters')
+    ax3plt = ax1plt[-2000:]
     ax3.scatter(np.arange(len(ax3plt)), ax3plt, color='blue')
 
     ax4 = plt.subplot(2,2,4)
-    ax4.set_title('G loss last 500')
-    ax4plt = ax2plt[-500:]
+    ax4.set_title('G loss last 2000 g iters')
+    ax4plt = ax2plt[-2000:]
     ax4.scatter(np.arange(len(ax4plt)), ax4plt, color='red')
 
 

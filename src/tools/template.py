@@ -114,10 +114,17 @@ class GAN_Painter(Painter):
     def plot_self(self, idx=0):
         to_plot = [self.inputs, self.outputs, self.painted]
         fig, axs = plt.subplots(1,3)
-        fig.set_size_inches(20, 10)
+        fig.set_size_inches(30, 10)
         for i, img in enumerate(to_plot):
-            axs[i].imshow(img[idx])
+            im = axs[i].imshow(img[idx], vmin=-1, vmax=1)
             axs[i].set_axis_off()
+            fig.colorbar(im, ax=axs[i])
+
+        fig, axs = plt.subplots(1,1)
+        fig.set_size_inches(20, 10)
+        axs.hist(to_plot[1].flatten())
+        axs.hist(to_plot[2].flatten())
+        axs.set_yscale('log', nonposy='clip')
 
 
     def validate_transforms(self, data, fields, stats, idxs):
@@ -187,7 +194,6 @@ class GAN_Painter(Painter):
     def validate_batch(self, batch_size, box_size, n_k_bin=20, transform_closure=False):
         inputs, outputs, painted, idxs = self.get_batch(batch_size)
 
-        plt.imshow(painted[0])
         data = [inputs, outputs, painted]
         fields = ['dm', 'pressure', 'pressure']
         names = ['dm', 'pressure', 'painted pressure']
