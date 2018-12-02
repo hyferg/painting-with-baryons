@@ -29,16 +29,16 @@ class NewTrainer:
         if strategy['schedule']['type'] == 'spectral':
             return Spectral(strategy)
 
-    def get_test_batch(inputs, targets, generator):
+    def get_test_batch(self, inputs, targets, generator):
         with torch.no_grad():
             generator.eval()
             fake_targets = torch.zeros_like(inputs)
             for i, img in enumerate(inputs):
                 fake_img = generator(img.view(1, *img.shape))
                 fake_targets[i] = fake_img
-            inputs = inputs.cpu().numpy()
-            targets = inputs.cpu().numpy()
-            fake_targets = inputs.cpu().numpy()
+            inputs = inputs.detach().cpu().numpy()
+            targets = targets.detach().cpu().numpy()
+            fake_targets = fake_targets.detach().cpu().numpy()
             generator.train()
 
         return inputs, targets, fake_targets
@@ -57,18 +57,25 @@ class NewTrainer:
     def validate(self, generator, test_iter, iterator_type, device):
         inputs, targets = self.parse_data(test_iter, device,
                                           iterator_type)
+        print(inputs.shape)
 
-        inputs, targets, fake_targets = self.get_test_batch(inputs, generator)
+        inputs, targets, fake_targets = self.get_test_batch(
+            inputs, targets, generator)
 
+        [print(x.shape) for x in [inputs, targets, fake_targets]]
         self.validate_show(inputs, targets, fake_targets)
 
-    def validate_show(inputs, targets, fake_targets, n=3):
+    def validate_show(self, inputs, targets, fake_targets, n=2, fig_width=4):
         images = [inputs, targets, fake_targets]
-        num_images = len(inputs)
-        fig, axs = plt.subplots(num_images, 3)
-        for i in range(3):
+        fig, axs = plt.subplots(n, 3)
+        for i in range(n):
             for j in range(3):
-                axs[i][j].imshow(images[j][i].squeeze())
+                ax = axs[i][j]
+                img = ax.imshow(images[j][i].squeeze(), vmin=-1, vmax=1)
+                ax.set_axis_off()
+                fig.colorbar(img, ax=ax)
+        fig.set_size_inches(fig_width, fig_width*n)
+
 
         self.loss_show(self.g_loss, self.d_loss)
 
@@ -131,6 +138,7 @@ class Spectral(NewTrainer):
                 g_loss = spectral_g_iter(inputs, targets,
                                          generator, discriminator, g_optim)
 
+                raise
                 self.g_loss.append(g_loss)
                 self.d_loss.append(d_loss)
                 self.validate(self.generator, test_iter, iterator_type, device)

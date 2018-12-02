@@ -62,7 +62,7 @@ schedule = {
     'inv_transform': inv_transform,
     'optimizer_params': optimizer_params,
     'redshifts': [0.0, 0.5, 1.0],
-    'batch_size': 4,
+    'batch_size': 2,
     'n_test': 64,
     'epochs':  10000,
     'save_dir': os.getenv('SDIR'),
