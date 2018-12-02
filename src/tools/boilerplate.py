@@ -4,10 +4,17 @@ import dill
 import torch
 from torch.utils.data import DataLoader
 from src.models.network import Network
-from src.models.trainer import Trainer
+from src.models.new_trainer import NewTrainer
 from src.tools.schedule import ScheduleLoader
 from src.tools.weights import FreezeModel, UnFreezeModel, init_weights
 from baryon_painter.utils.datasets import BAHAMASDataset
+
+
+def path_name():
+    folder = os.path.basename(os.path.dirname(__file__))
+    subfolder = os.path.splitext(os.path.basename(__file__))[0]
+    name = '/' + folder + '/' + subfolder + '/'
+    return name
 
 def files_info(data_path):
     with open(os.path.join(data_path, "train_files_info.pickle"), "rb") as f:
@@ -16,6 +23,7 @@ def files_info(data_path):
         test_files_info = pickle.load(f)
 
     return training_files_info, test_files_info
+
 
 class boiler(object):
     def __init__(self, g_struc, d_struc, schedule, device=None, data_path=None, pre_load=None):
@@ -91,13 +99,26 @@ class boiler(object):
             s.schedule['g_optim_opts']['lr'] = pre_load['lr']
             s.schedule['d_optim_opts']['lr'] = pre_load['lr']
 
-        self.trainer = Trainer.factory(s.schedule,
-                                       generator,
-                                       discriminator,
-                                       dataloader=train_loader,
-                                       testloader=test_loader,
-                                       device=device,
-                                       dataset=test_dataset)
+        strategy = {
+            'schedule': s.schedule,
+            'generator': generator,
+            'discriminator': discriminator,
+            'train_loader': train_loader,
+            'test_loader': test_loader,
+            'device': device,
+        }
+
+        self.trainer = NewTrainer.factory(strategy)
+
+        '''
+        self.trainer = NewTrainer.factory(s.schedule,
+                                          generator,
+                                          discriminator,
+                                          dataloader=train_loader,
+                                          testloader=test_loader,
+                                          device=device,
+                                          dataset=test_dataset)
+        '''
 
 
 
@@ -121,4 +142,4 @@ class boiler(object):
         _sch.close()
 
     def run(self):
-        self.trainer.train_iter()
+        self.trainer.train()

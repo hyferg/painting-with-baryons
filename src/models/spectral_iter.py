@@ -24,6 +24,8 @@ def spectral_d_iter(inputs, targets, generator, discriminator, D_optim):
 
     D_optim.step()
 
+    return float(D_loss.detach().cpu().numpy())
+
 
 def spectral_g_iter(inputs, targets, generator, discriminator,
                     G_optim, perceptual_loss=None):
@@ -44,3 +46,5 @@ def spectral_g_iter(inputs, targets, generator, discriminator,
     G_loss_fake.backward()
 
     G_optim.step()
+
+    return float(G_loss_fake.detach().cpu().numpy())
