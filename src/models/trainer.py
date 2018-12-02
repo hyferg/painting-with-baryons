@@ -19,6 +19,35 @@ from src.models.wgp_d_iter import iter_discriminator
 from src.models.wgp_g_iter import iter_generator
 
 
+class NewTrainer:
+    def __init__(self, schedule, generator, discriminator, device):
+        self.schedule = schedule
+        self.generator = generator
+        self.discriminator = discriminator
+        self.device = device
+
+    @staticmethod
+    def factory(strategy):
+        if strategy['schedule']['type'] == 'spectral':
+            return Spectral(**strategy)
+
+    def validate_show():
+        raise NotImplementedError
+
+    def validate_save():
+        raise NotImplementedError
+
+    def train():
+        raise NotImplementedError
+
+
+class Spectral():
+    def __init__(self):
+        super(Spectral, self).__init__()
+
+    def train():
+
+
 class Trainer():
     @staticmethod
     def factory(schedule, Generator=None, Discriminator=None, dataloader=None, device=None, testloader=None, **kwargs):
