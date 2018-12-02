@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from src.models.layers.residual import ResBlocks
+from torch.nn.utils import spectral_norm
 import copy
 
 class Network(nn.Module):
@@ -161,14 +162,17 @@ class CNN(Network):
             except: pass
 
             if filter['type'] == 'normal':
-                _filter.append(
-                    nn.Conv2d(**_opts)
-                )
+                conv = nn.Conv2d(**_opts)
 
             if filter['type'] == 'transpose':
-                _filter.append(
-                    nn.ConvTranspose2d(**_opts)
-                )
+                conv = nn.ConvTranspose2d(**_opts)
+
+            if 'spectral' in filter:
+                if filter['spectral'] is True:
+                    print('spectral applied')
+                    conv = spectral_norm(conv)
+
+            _filter.append(conv)
 
             if 'init_type' in filter:
                 if filter['init_type'] == 'xavier':

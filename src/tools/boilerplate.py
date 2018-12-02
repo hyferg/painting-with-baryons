@@ -50,7 +50,9 @@ class boiler(object):
             dill.dump(schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         generator = Network.factory(g_struc)
+        generator.to(device)
         discriminator = Network.factory(d_struc)
+        discriminator.to(device)
 
         if 'g_init' not in schedule:
             schedule['g_init'] = {
@@ -61,8 +63,8 @@ class boiler(object):
                 'init_type': 'xavier'
             }
 
-        init_weights(generator, **schedule['g_init'])
-        init_weights(discriminator, **schedule['d_init'])
+        init_weights(generator, schedule['init_params']['g'])
+        init_weights(discriminator, schedule['init_params']['d'])
 
         s = ScheduleLoader(schedule)
 

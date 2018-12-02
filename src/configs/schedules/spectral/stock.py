@@ -30,8 +30,10 @@ optim_opts = {
 }
 
 optimizer_params = {
-    'grad_lambda': 10,
-    'perceptual_lambda': 1,
+    'perceptual_loss_opts': {
+        'type': 'l1',
+        'percep_lambda': 10,
+    },
     'g': {
         'type': 'adam',
         'opts': optim_opts,
@@ -62,8 +64,10 @@ schedule = {
     'inv_transform': inv_transform,
     'optimizer_params': optimizer_params,
     'redshifts': [0.0, 0.5, 1.0],
-    'batch_size': 2,
+    'batch_size': 4,
     'n_test': 64,
     'epochs':  10000,
+    'pseudo_epoch_iters': 1500,
     'save_dir': os.getenv('SDIR'),
+    'init_params': init_params,
 }

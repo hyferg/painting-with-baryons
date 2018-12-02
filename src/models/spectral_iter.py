@@ -18,7 +18,7 @@ def spectral_d_iter(inputs, targets, generator, discriminator, D_optim):
     D_loss_real = torch.log(D_out_real).mean()
     D_loss_fake = torch.log(1 - D_out_fake).mean()
 
-    D_loss = D_loss_real + D_loss_fake
+    D_loss = -0.5*(D_loss_real + D_loss_fake)
 
     D_loss.backward()
 
@@ -29,7 +29,7 @@ def spectral_d_iter(inputs, targets, generator, discriminator, D_optim):
 
 def spectral_g_iter(inputs, targets, generator, discriminator,
                     G_optim, perceptual_loss=None):
-
+    g_loss_percep = None
     G_optim.zero_grad()
 
     fake_targets = generator(inputs)
@@ -38,13 +38,16 @@ def spectral_g_iter(inputs, targets, generator, discriminator,
 
     D_out_fake = discriminator(D_in_fake)
 
-    G_loss_fake = torch.log(D_out_fake).mean()
+    G_loss_fake = -0.5*torch.log(D_out_fake).mean()
+    g_loss_adv = float(G_loss_fake.detach().cpu().numpy())
 
-    if perceptual_loss:
-        G_loss_fake += perceptual_loss(targets, fake_targets)
+    if perceptual_loss is not None:
+        p_loss = perceptual_loss(targets, fake_targets)
+        g_loss_percep = float(p_loss.detach().cpu().numpy())
+        G_loss_fake += p_loss
 
     G_loss_fake.backward()
 
     G_optim.step()
 
-    return float(G_loss_fake.detach().cpu().numpy())
+    return g_loss_adv, g_loss_percep
