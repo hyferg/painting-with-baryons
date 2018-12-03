@@ -27,7 +27,7 @@ d_structure = {
                 'kernel_size': 4,
                 'stride': 2,
                 'padding': 1,
-                'bias': False,
+                'bias': True,
                 'pre_batch_norm': False,
                 'activation': nn.LeakyReLU(0.2, True),
                 'post_batch_norm': False
@@ -39,7 +39,7 @@ d_structure = {
                 'kernel_size': 4,
                 'stride': 2,
                 'padding': 1,
-                'bias': False,
+                'bias': True,
                 'pre_batch_norm': False,
                 'activation': nn.LeakyReLU(0.2, True),
                 'post_batch_norm': False
@@ -51,7 +51,7 @@ d_structure = {
                 'kernel_size': 4,
                 'stride': 1,
                 'padding': 1,
-                'bias': False,
+                'bias': True,
                 'pre_batch_norm': False,
                 'activation': nn.LeakyReLU(0.2, True),
                 'post_batch_norm': False

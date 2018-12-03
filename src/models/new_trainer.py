@@ -53,13 +53,12 @@ class NewTrainer:
             os.makedirs(self.save_path_loss, exist_ok=True)
             os.makedirs(self.img_path, exist_ok=True)
 
-    def save_parts(self, n_iter):
+    def save_parts(self, epoch, n_iter):
         with torch.no_grad():
             self.generator.eval()
             self.generator.save_self(
-                self.schedule['save_dir'] + f'/parts/g_{n_iter}_iter.cp'
+                self.schedule['save_dir'] + f'/parts/g_{epoch}_{n_iter}_iter.cp'
             )
-
 
     def get_test_batch(self, inputs, targets, generator):
         with torch.no_grad():
@@ -141,7 +140,7 @@ class NewTrainer:
                           signal.medfilt(g_loss, median_window))
 
 
-        axs[1][1].set_title('D Loss [{d_loss[-1]}]')
+        axs[1][1].set_title(f'D Loss [{d_loss[-1]}]')
         axs[1][1].scatter(np.arange(len(d_loss)),
                           signal.medfilt(d_loss, median_window))
 
@@ -158,7 +157,6 @@ class NewTrainer:
             return lambda x, x_fake: percep_lambda * 0.5*torch.abs(x - x_fake).mean()
         else:
             raise NotImplementedError
-
 
     def validate_save():
         raise NotImplementedError
@@ -203,7 +201,7 @@ class Spectral(NewTrainer):
                     train_iter = iter(train_loader)
                     test_iter = iter(test_loader)
                     self.validate(self.generator, test_iter, iterator_type, device)
-                    self.save_parts(i)
+                    self.save_parts(epoch, i)
                     data_iters = 0
 
                 epoch_break = self.pseudo_epoch(i, pseudo_epoch_iters)
@@ -232,10 +230,9 @@ class Spectral(NewTrainer):
                 self.g_loss_adv.append(g_loss_adv)
                 self.g_loss_percep.append(g_loss_percep)
                 self.d_loss.append(d_loss)
-                if i%1 is 0:
+                if i%5 is 0:
                     print(f'e{epoch}i{i}')
-                    #print(f' [d_loss: {d_loss}, g_loss_adv: {g_loss_adv}, g_loss_percep: {g_loss_percep}]')
-                if i%25 is 0 or i in [1, 2, 3, 4, 5]:
+                if i%100 is 0 or i in [1, 2, 3, 4, 5, 10, 20 , 50, 75, 125]:
                     os.system('clear')
                     clear_output()
 
@@ -245,8 +242,8 @@ class Spectral(NewTrainer):
                     print(f'd_lr {d_lr}')
 
                     self.validate(self.generator, test_iter, iterator_type, device)
-                if i%25 is 0:
-                    self.save_parts(i)
+                if i%100 is 0:
+                    self.save_parts(epoch, i)
 
 
 
