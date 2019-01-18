@@ -6,6 +6,7 @@ import scipy.signal as signal
 import numpy as np
 from src.models.spectral_iter import spectral_d_iter, spectral_g_iter
 from IPython.display import clear_output
+from src.tools.data import parse_data
 
 class NewTrainer:
     def __init__(self, schedule, generator, discriminator,
@@ -63,9 +64,10 @@ class NewTrainer:
     def get_test_batch(self, inputs, targets, generator):
         with torch.no_grad():
             generator.eval()
-            fake_targets = torch.zeros_like(inputs)
+            fake_targets = torch.zeros_like(targets)
             for i, img in enumerate(inputs):
-                fake_img = generator(img.view(1, *img.shape))
+                img = img.view(1, *img.shape)
+                fake_img = generator(img)
                 fake_targets[i] = fake_img
             inputs = inputs.detach().cpu().numpy()
             targets = targets.detach().cpu().numpy()
@@ -74,20 +76,9 @@ class NewTrainer:
 
         return inputs, targets, fake_targets
 
-    def parse_data(self, iterator, device, iterator_type='troster'):
-        if iterator_type is 'troster':
-            data = iterator.next()
-            inputs = data[0][0].to(device)
-            targets = data[0][1].to(device)
-
-        else:
-            raise NotImplementedError
-
-        return inputs, targets
-
     def validate(self, generator, test_iter, iterator_type, device):
-        inputs, targets = self.parse_data(test_iter, device,
-                                          iterator_type)
+        inputs, targets = parse_data(test_iter, device,
+                                     iterator_type)
 
         inputs, targets, fake_targets = self.get_test_batch(
             inputs, targets, generator)
@@ -95,6 +86,8 @@ class NewTrainer:
         self.validate_show(inputs, targets, fake_targets)
 
     def validate_show(self, inputs, targets, fake_targets, n=2, fig_width=8):
+        if inputs.shape[1] == 2:
+            inputs = inputs[:,0,:,:]
         images = [inputs, targets, fake_targets]
         fig, axs = plt.subplots(n, 3)
         for i in range(n):
@@ -210,13 +203,13 @@ class Spectral(NewTrainer):
                     d_decay.step()
                     break
 
-                inputs, targets = self.parse_data(train_iter, device,
+                inputs, targets = parse_data(train_iter, device,
                                                   iterator_type)
 
                 d_loss = spectral_d_iter(inputs, targets,
                                          generator, discriminator, d_optim)
 
-                inputs, targets = self.parse_data(train_iter, device,
+                inputs, targets = parse_data(train_iter, device,
                                                   iterator_type)
 
                 g_loss_adv, g_loss_percep = spectral_g_iter(

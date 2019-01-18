@@ -3,11 +3,24 @@ import os
 from baryon_painter.utils.data_transforms import \
     create_range_compress_transforms, chain_transformations, \
     atleast_3d, squeeze
+from src.tools.data import Data
+
+d = Data(os.environ['DATA_DIR'])
+redshifts = d.redshifts_list()
 
 range_compress_transform, range_compress_inv_transform = \
- create_range_compress_transforms(k_values={"dm": 1.5, "pressure": 4},
+ create_range_compress_transforms(k_values={"dm": [1.5, 0.0],
+                                            "pressure": 4.0},
                                   modes={'dm': 'x/(1+x)',
                                          'pressure': 'log'})
+
+'''
+range_compress_transform, range_compress_inv_transform = \
+ create_range_compress_transforms(k_values={"dm": 4.0,
+                                            "pressure": 4.0},
+                                  modes={'dm': 'shift-log',
+                                         'pressure': 'shift-log'})
+'''
 
 
 transform = chain_transformations([range_compress_transform,
@@ -59,11 +72,11 @@ optimizer_params = {
 
 schedule = {
     'type': 'spectral',
-    'iterator_type': 'troster',
+    'iterator_type': 'troster-redshift',
     'transform': transform,
     'inv_transform': inv_transform,
     'optimizer_params': optimizer_params,
-    'redshifts': [0.0, 0.5, 1.0],
+    'redshifts': redshifts,
     'batch_size': 4,
     'n_test': 64,
     'epochs':  10000,

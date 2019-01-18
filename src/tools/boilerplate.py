@@ -19,10 +19,12 @@ def path_name():
 def files_info(data_path):
     with open(os.path.join(data_path, "train_files_info.pickle"), "rb") as f:
         training_files_info = pickle.load(f)
+    '''
     with open(os.path.join(data_path, "test_files_info.pickle"), "rb") as f:
         test_files_info = pickle.load(f)
+    '''
 
-    return training_files_info, test_files_info
+    return training_files_info, None
 
 
 class boiler(object):
@@ -83,6 +85,8 @@ class boiler(object):
                                        transform=transform,
                                        inverse_transform=inv_transform)
 
+        #TODO
+        test_files_info = training_files_info
         test_dataset = BAHAMASDataset(test_files_info, root_path=data_path,
                                        redshifts=schedule['redshifts'],
                                        label_fields=label_fields,

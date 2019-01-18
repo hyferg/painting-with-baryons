@@ -3,13 +3,14 @@ import torch.nn as nn
 RES_INPUT = (128, 64, 64)
 RES_OUTPUT = RES_INPUT
 
-IMAGE_DIMENSIONS = (1, 256, 256)
+IMAGE_IN =  (2, 512, 512)
+IMAGE_OUT = (1, 512, 512)
 t_bias = True
 
 g_structure = {
     'type': 'resnet_translator',
     'encode_stack': {
-        'input': IMAGE_DIMENSIONS,
+        'input': IMAGE_IN,
         'output': RES_INPUT,
         'filters': [
             {
@@ -56,7 +57,7 @@ g_structure = {
     },
     'decode_stack': {
         'input': RES_OUTPUT,
-        'output': IMAGE_DIMENSIONS,
+        'output': IMAGE_OUT,
         'filters': [
             {
                 'type': 'transpose',
@@ -86,7 +87,7 @@ g_structure = {
                 'type': 'normal',
                 'init_type': 'xavier',
                 'init_gain': 0.75,
-                'out_channels': IMAGE_DIMENSIONS[0],
+                'out_channels': IMAGE_OUT[0],
                 'kernel_size': 9,
                 'stride': 1,
                 'padding': 4,

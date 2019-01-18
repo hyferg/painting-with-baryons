@@ -12,6 +12,8 @@ from baryon_painter.utils.datasets import BAHAMASDataset
 import src.visualization.show as show
 from torch.utils.data import DataLoader
 import src.tools.stats as stat
+from src.tools.data import parse_data
+from baryon_painter.models.utils import merge_aux_label
 
 
 class GAN_Painter(Painter):
@@ -59,15 +61,10 @@ class GAN_Painter(Painter):
         self.generator.load_self(filename, device)
         self.generator.to(self.compute_device)
 
-    def paint(self, input, z=0.0, stats=None, inverse_transform=True):
+    def paint(self, input, z=0.0, stats=None, inverse_transform=True, red=None):
         with torch.no_grad():
             self.generator.eval()
-            if self.transform is not None:
-                y = self.transform(
-                    input, field=self.input_field, z=z, stats=stats)
-            else:
-                y = input
-            y = y.reshape(1, *y.shape)
+
             y = torch.tensor(y, device=self.compute_device)
             prediction = self.generator(y).cpu().numpy()
 
@@ -92,7 +89,7 @@ class GAN_Painter(Painter):
 
         self.test_iter = iter(self.test_loader)
 
-    def get_batch(self, batch_size, inverse_transform=True, full=False):
+    def get_batch(self, batch_size, inverse_transform=True, full=False, type=None):
         inputs = np.zeros((batch_size, *self.img_dim))
         outputs = np.zeros((batch_size, *self.img_dim))
         painted = np.zeros((batch_size, *self.img_dim))
@@ -101,7 +98,8 @@ class GAN_Painter(Painter):
             self.t_painted = np.zeros((batch_size, *self.img_dim))
         idxs = []
         for i in range(batch_size):
-            img, idx = next(self.test_iter)
+            img, idx, red = parse_data(self.test_iter, self.compute_device, type)
+
             z = self.test_dataset.sample_idx_to_redshift(idx)
 
             if inverse_transform is False:
@@ -114,14 +112,26 @@ class GAN_Painter(Painter):
 
 
             else:
-                inputs[i] = img[0].numpy()
-                outputs[i] = img[1].numpy()
-            painted[i] = self.paint(img[0].numpy(), z=z, stats=self.test_dataset.stats,
-                                    inverse_transform=inverse_transform)
+                inputs[i] = img[0].cpu().numpy()
+                outputs[i] = img[1].cpu().numpy()
+
+            img = [x.cpu().numpy() for x in img]
+
+            #TODO
+            if self.transform is not None:
+                y = self.transform(
+                    img[0], field=self.input_field, z=z, stats=stats)
+            y = y.reshape(1, *y.shape)
+
+            if type == 'troster-redshift-validate':
+                y = merge_aux_label(y, red)
+
+            painted[i] = self.paint(y, z=z, stats=self.test_dataset.stats,
+                                    inverse_transform=inverse_transform, red=red)
             if full:
-                self.t_painted[i] = self.paint(img[0].numpy(), z=z, stats=self.test_dataset.stats,
+                self.t_painted[i] = self.paint(y, z=z, stats=self.test_dataset.stats,
                                           inverse_transform=False)
-                self.t_outputs[i] = self.transform(img[1].numpy(),
+                self.t_outputs[i] = self.transform(img[1],
                                             self.label_fields[0], z=z,
                                             stats=self.test_dataset.stats)
 

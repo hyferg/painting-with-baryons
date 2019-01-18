@@ -1,6 +1,34 @@
 import os
 import pickle
 import pprint as pp
+from baryon_painter.models.utils import merge_aux_label
+
+def parse_data(iterator, device, iterator_type=None):
+    if iterator_type == 'troster':
+        data = iterator.next()
+        inputs = data[0][0].to(device)
+        targets = data[0][1].to(device)
+
+    elif iterator_type == 'troster-redshift':
+        data = iterator.next()
+        inputs_bare = data[0][0].to(device)
+        targets = data[0][1].to(device)
+        redshifts = data[2].type(inputs_bare.type()).to(device)
+        inputs = merge_aux_label(inputs_bare, redshifts)
+
+    elif iterator_type == 'troster-redshift-validate':
+        data = iterator.next()
+        img = [x.to(device) for x in data[0]]
+        idx = data[1].to(device)
+        red = data[2].type(img[0].type()).to(device)
+
+        return img, idx, red
+
+    else:
+        print(f'{iterator_type} is not known')
+        raise NotImplementedError
+
+    return inputs, targets
 
 class Data(object):
     """Data slice handler
@@ -34,8 +62,8 @@ class Data(object):
         self.thicknesses = thicknesses
         self.verify_slices_exist()
 
-    def redshifts(self):
-        return [int(x) for x in self.redshifts]
+    def redshifts_list(self):
+        return [float(x) for x in self.redshifts]
 
     def uids(self):
         uids = []
