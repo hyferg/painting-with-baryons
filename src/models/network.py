@@ -134,8 +134,6 @@ class CNN(Network):
         elif network_structure['type'] == 'patchgan_discriminator':
             print(' -> PatchGAN Discriminator')
             return PatchGanDiscriminator(network_structure)
-
-
         else: raise Exception()
 
 
@@ -220,7 +218,6 @@ class ResNet(CNN):
     def __init__(self, network_structure):
         super().__init__()
         self.network_structure = network_structure
-        self.schedule = None
         self.losses = {}
         self.niter = 0
         self.epoch = 0

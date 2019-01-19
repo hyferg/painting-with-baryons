@@ -9,6 +9,7 @@ t_bias = True
 
 g_structure = {
     'type': 'resnet_translator',
+    'iterator_type': 'troster-redshift',
     'encode_stack': {
         'input': IMAGE_IN,
         'output': RES_INPUT,

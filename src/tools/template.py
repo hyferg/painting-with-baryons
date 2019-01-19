@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 import src.tools.stats as stat
 from src.tools.data import parse_data
 from baryon_painter.models.utils import merge_aux_label
-
+import pprint as pp
 
 class GAN_Painter(Painter):
     def __init__(self, parts_folder,
@@ -61,24 +61,42 @@ class GAN_Painter(Painter):
         self.generator.load_self(filename, device)
         self.generator.to(self.compute_device)
 
-    def paint(self, input, z=0.0, stats=None, inverse_transform=True, red=None):
+    def paint(self, input, z=None, stats=None, inverse_transform=True):
+        if z is None:
+            raise ValueError('Provide a float redshift value (z) for slice to paint.')
+        if stats is None:
+            raise ValueError('Provide slice statistics (stats).')
+
+        #TODO
+        # input is numpy matrix
+        # z is float-type data
+        scalar_z = float(z)
+
+        if self.transform is not None:
+            input = self.transform(
+                input, field=self.input_field, z=scalar_z, stats=stats)
+        y = input.reshape(1, *input.shape)
+        y = torch.tensor(y, device=self.compute_device)
+        tensor_z = torch.tensor(z, device=self.compute_device, dtype=y.dtype)
+
+        if self.generator.network_structure['iterator_type'] == 'troster-redshift':
+            y = merge_aux_label(y, tensor_z)
+
         with torch.no_grad():
             self.generator.eval()
-
             y = torch.tensor(y, device=self.compute_device)
             prediction = self.generator(y).cpu().numpy()
-
         if inverse_transform and self.inv_transform is not None:
             return self.inv_transform(
-                prediction, field=self.label_fields[0], z=z, stats=stats)
+                prediction, field=self.label_fields[0], z=scalar_z, stats=stats)
         else:
             return prediction
 
-    def load_test_data(self, data_path, redshifts=[0.0, 0.5, 1.0], test=True):
+    def load_test_data(self, data_path, redshifts, test=True):
         train_file_info, test_files_info = files_info(data_path)
         label_fields = ["pressure"]
 
-        (print('test') if test else print('train'))
+        (print('using test data') if test else print('using train data'))
         self.test_dataset = BAHAMASDataset(
             (test_files_info if test else train_file_info),
             root_path=data_path,
@@ -86,7 +104,6 @@ class GAN_Painter(Painter):
             label_fields=label_fields)
 
         self.test_loader = DataLoader(self.test_dataset, batch_size=1, shuffle=True)
-
         self.test_iter = iter(self.test_loader)
 
     def get_batch(self, batch_size, inverse_transform=True, full=False, type=None):
@@ -98,9 +115,10 @@ class GAN_Painter(Painter):
             self.t_painted = np.zeros((batch_size, *self.img_dim))
         idxs = []
         for i in range(batch_size):
-            img, idx, red = parse_data(self.test_iter, self.compute_device, type)
-
-            z = self.test_dataset.sample_idx_to_redshift(idx)
+            if i%5 == 0:
+                print(f'{i}/{batch_size}')
+            img, idx, z = parse_data(self.test_iter, self.compute_device, type)
+            #z = self.test_dataset.sample_idx_to_redshift(idx)
 
             if inverse_transform is False:
                 inputs[i] = self.transform(img[0].numpy(),
@@ -109,33 +127,24 @@ class GAN_Painter(Painter):
                 outputs[i] = self.transform(img[1].numpy(),
                                             self.label_fields[0], z=z,
                                             stats=self.test_dataset.stats)
-
-
             else:
                 inputs[i] = img[0].cpu().numpy()
                 outputs[i] = img[1].cpu().numpy()
 
+
+            #TODO is this the right stats?
             img = [x.cpu().numpy() for x in img]
-
-            #TODO
-            if self.transform is not None:
-                y = self.transform(
-                    img[0], field=self.input_field, z=z, stats=stats)
-            y = y.reshape(1, *y.shape)
-
-            if type == 'troster-redshift-validate':
-                y = merge_aux_label(y, red)
-
-            painted[i] = self.paint(y, z=z, stats=self.test_dataset.stats,
-                                    inverse_transform=inverse_transform, red=red)
+            painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats,
+                                    inverse_transform=inverse_transform)
             if full:
-                self.t_painted[i] = self.paint(y, z=z, stats=self.test_dataset.stats,
+                self.t_painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats,
                                           inverse_transform=False)
+                scalar_z = float(z)
                 self.t_outputs[i] = self.transform(img[1],
-                                            self.label_fields[0], z=z,
+                                            self.label_fields[0], z=scalar_z,
                                             stats=self.test_dataset.stats)
 
-            idxs.append(int(idx.numpy()))
+            idxs.append(int(idx.cpu().numpy()))
 
         return [x.squeeze() for x in [inputs, outputs, painted]] + [np.array(idxs, dtype='uint32')]
 
@@ -293,7 +302,7 @@ class GAN_Painter(Painter):
 
         plt.show()
 
-    def report_cc(self, true, fake, box_size, batch_size, n_k_bin, idxs, xlim, colors):
+    def report_cc(self, true, fake, box_size, batch_size, n_k_bin, idxs, xlim, colors, redshifts):
         fig = plt.figure()
         gs = gridspec.GridSpec(3, 1, height_ratios=[3, 1, 1])
         axes = []
@@ -302,23 +311,18 @@ class GAN_Painter(Painter):
         ax.set_title(f'Fractional Difference of\nFake over Real DM x Pressure Cross Correlations\nfrom {batch_size} samples')
         ax.axhline(color='black', lw=1.5)
 
-
-        z_idxs = {
-            '0.0': [],
-            '0.5': [],
-            '1.0': [],
-        }
+        z_idxs = {r: [] for r in redshifts}
 
         y_frac_batch = np.zeros((batch_size, n_k_bin))
         for i in range(batch_size):
-            z = str(self.test_dataset.sample_idx_to_redshift(idxs[i]))
+            z = float(self.test_dataset.sample_idx_to_redshift(idxs[i]))
             x, y  = stat.cross([true[0][i], true[1][i]], box_size=box_size, n_k_bin=n_k_bin)
             _x, _y  = stat.cross([fake[0][i], fake[1][i]], box_size=box_size, n_k_bin=n_k_bin)
             frac_diff = _y/y-1
             y_frac_batch[i,:] = frac_diff
 
             ax.plot(x, frac_diff, colors[z], alpha=0.2)
-            ax.set_ylim([-2, 4])
+            ax.set_ylim([-0.5, 0.5])
 
             z_idxs[z].append([x, y, _y, frac_diff])
 
@@ -329,10 +333,10 @@ class GAN_Painter(Painter):
                 lw=2.5, path_effects=[pe.Stroke(linewidth=5, foreground='black'), pe.Normal()])
 
         handles, labels = ax.get_legend_handles_labels()
-        z0_patch = mpatches.Patch(color=colors['0.0'], label='Redshift 0.0')
-        z05_patch = mpatches.Patch(color=colors['0.5'], label='Redshift 0.5')
-        z10_patch = mpatches.Patch(color=colors['1.0'], label='Redshift 1.0')
-        ax.legend(handles=[z0_patch, z05_patch, z10_patch, handles[0]])
+        patches = []
+        for z_float, color in colors.items():
+            patches.append(mpatches.Patch(color=color, label=f'Redshift {z_float}'))
+        ax.legend(handles=patches + [handles[0]])
 
         ax = plt.subplot(gs[1])
         axes.append(ax)
@@ -363,18 +367,18 @@ class GAN_Painter(Painter):
 
         return fig, y_frac_max_vals_sorted_idxs, z_idxs
 
-    def report_plot(self, batch_size, box_size, n_k_bin=20, name=None):
+    def report_plot(self, batch_size, box_size, n_k_bin=20, name=None, redshifts=None):
         xlim = [6.15*10**-2, 10]
-        colors = {'0.0': 'blue',
-                  '0.5': 'orange',
-                  '1.0': 'red'}
+
+        colors = {r: 'blue' for r in redshifts}
 
         cc_params = {'box_size': box_size,
                      'batch_size': batch_size,
                      'n_k_bin': n_k_bin,
                      'idxs': self.idxs,
                      'xlim': xlim,
-                     'colors': colors}
+                     'colors': colors,
+                     'redshifts': redshifts}
         plt.rcParams.update({'font.family': 'serif',
                              'pgf.texsystem': 'pdflatex'})
 
@@ -385,11 +389,12 @@ class GAN_Painter(Painter):
         fig.tight_layout()
         fig.savefig(name+f'_meta.pdf', format='pdf', bbox_inches='tight')
 
-        for z in ['0.0', '0.5', '1.0']:
-            fig = self.z_plot(z_idxs[z], color=colors[z], xlim=xlim, z=z)
-            fig.set_size_inches(4, 6)
-            fig.tight_layout()
-            fig.savefig(name+f'_z{z}.pdf', format='pdf', bbox_inches='tight')
+        for z in redshifts:
+            if z_idxs[z] != []:
+                fig = self.z_plot(z_idxs[z], color=colors[z], xlim=xlim, z=z)
+                fig.set_size_inches(4, 6)
+                fig.tight_layout()
+                fig.savefig(name+f'_z{z}.pdf', format='pdf', bbox_inches='tight')
 
         # pixel dist
         fig, axs = plt.subplots(1,1)
