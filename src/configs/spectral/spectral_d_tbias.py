@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-IMAGE_DIMENSIONS = (2, 256, 256)
+IMAGE_DIMENSIONS = (3, 256, 256)
 
 d_structure = {
     'type': 'patchgan_discriminator',

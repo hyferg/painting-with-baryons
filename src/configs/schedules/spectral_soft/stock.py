@@ -10,18 +10,12 @@ d = Data(os.environ['DATA_DIR'])
 redshifts = d.redshifts_list()[0:8]
 
 range_compress_transform, range_compress_inv_transform = \
- create_range_compress_transforms(k_values={"dm": [2, 1.1],
-                                            "pressure": 7.0},
-                                  modes={'dm': 'x/(1+x)',
-                                         'pressure': 'log'})
-
-'''
-range_compress_transform, range_compress_inv_transform = \
- create_range_compress_transforms(k_values={"dm": 4.0,
-                                            "pressure": 4.0},
+ create_range_compress_transforms(k_values={"dm": [4.0, 1.0],
+                                            "pressure": [4.0, 1.0]},
                                   modes={'dm': 'shift-log',
-                                         'pressure': 'shift-log'})
-'''
+                                         'pressure': 'shift-log'},
+                                  eps=1e-4)
+
 
 
 transform = chain_transformations([range_compress_transform,

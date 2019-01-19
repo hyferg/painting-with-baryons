@@ -104,7 +104,7 @@ class NewTrainer:
                  label='Targets')
         axs.hist(fake_targets.flatten(), alpha=0.5, color='red', bins=50,
                  label='Fake Targets')
-        axs.set_xlim([-1, 1])
+        axs.set_xlim([-2, 2])
         axs.set_yscale('log', nonposy='clip')
         fig.set_size_inches(fig_width, fig_width//2)
 
