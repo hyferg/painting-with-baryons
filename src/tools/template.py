@@ -367,7 +367,7 @@ class GAN_Painter(Painter):
 
         return fig, y_frac_max_vals_sorted_idxs, z_idxs
 
-    def report_plot(self, batch_size, box_size, n_k_bin=20, name=None, redshifts=None):
+    def report_plot(self, batch_size, box_size, n_k_bin=20, name=None, redshifts=None, granular=False):
         xlim = [6.15*10**-2, 10]
 
         colors = {r: 'blue' for r in redshifts}
@@ -389,12 +389,13 @@ class GAN_Painter(Painter):
         fig.tight_layout()
         fig.savefig(name+f'_meta.pdf', format='pdf', bbox_inches='tight')
 
-        for z in redshifts:
-            if z_idxs[z] != []:
-                fig = self.z_plot(z_idxs[z], color=colors[z], xlim=xlim, z=z)
-                fig.set_size_inches(4, 6)
-                fig.tight_layout()
-                fig.savefig(name+f'_z{z}.pdf', format='pdf', bbox_inches='tight')
+        if granular:
+            for z in redshifts:
+                if z_idxs[z] != []:
+                    fig = self.z_plot(z_idxs[z], color=colors[z], xlim=xlim, z=z)
+                    fig.set_size_inches(4, 6)
+                    fig.tight_layout()
+                    fig.savefig(name+f'_z{z}.pdf', format='pdf', bbox_inches='tight')
 
         # pixel dist
         fig, axs = plt.subplots(1,1)

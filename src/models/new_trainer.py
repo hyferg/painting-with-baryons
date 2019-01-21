@@ -225,7 +225,7 @@ class Spectral(NewTrainer):
                 self.d_loss.append(d_loss)
                 if i%5 is 0:
                     print(f'e{epoch}i{i}')
-                if i%100 is 0 or i in [1, 2, 3, 4, 5, 10, 20 , 50, 75, 125]:
+                if i%101 is 0 or (i in [1, 2, 3, 4, 5, 10, 20 , 50, 75, 125] and epoch is 0):
                     os.system('clear')
                     clear_output()
 
@@ -235,7 +235,7 @@ class Spectral(NewTrainer):
                     print(f'd_lr {d_lr}')
 
                     self.validate(self.generator, test_iter, iterator_type, device)
-                if i%100 is 0:
+                if i%95 is 0:
                     self.save_parts(epoch, i)
 
 
