@@ -61,20 +61,18 @@ class GAN_Painter(Painter):
         self.generator.load_self(filename, device)
         self.generator.to(self.compute_device)
 
-    def paint(self, input, z=None, stats=None, inverse_transform=True):
+    def paint(self, input, z=None, inverse_transform=True, transform=None):
         if z is None:
             raise ValueError('Provide a float redshift value (z) for slice to paint.')
-        if stats is None:
-            raise ValueError('Provide slice statistics (stats).')
 
         #TODO
         # input is numpy matrix
         # z is float-type data
         scalar_z = float(z)
 
-        if self.transform is not None:
+        if transform and self.transform is not None:
             input = self.transform(
-                input, field=self.input_field, z=scalar_z, stats=stats)
+                input, field=self.input_field, z=scalar_z)
         y = input.reshape(1, *input.shape)
         y = torch.tensor(y, device=self.compute_device)
         tensor_z = torch.tensor(z, device=self.compute_device, dtype=y.dtype)
@@ -88,7 +86,7 @@ class GAN_Painter(Painter):
             prediction = self.generator(y).cpu().numpy()
         if inverse_transform and self.inv_transform is not None:
             return self.inv_transform(
-                prediction, field=self.label_fields[0], z=scalar_z, stats=stats)
+                prediction, field=self.label_fields[0], z=scalar_z)
         else:
             return prediction
 
@@ -96,12 +94,21 @@ class GAN_Painter(Painter):
         train_file_info, test_files_info = files_info(data_path)
         label_fields = ["pressure"]
 
+        n_training_stack = 11
+        n_validation_stack = 3
+        n_scale = 1
+
         (print('using test data') if test else print('using train data'))
         self.test_dataset = BAHAMASDataset(
-            (test_files_info if test else train_file_info),
-            root_path=data_path,
+            files=(test_files_info if test else train_file_info), root_path=data_path,
             redshifts=redshifts,
-            label_fields=label_fields)
+            label_fields=label_fields,
+            n_stack=n_validation_stack, stack_offset=n_training_stack,
+            n_feature_per_field=n_scale,
+            mmap_mode="r",
+            scale_to_SLICS=True,
+            subtract_minimum=False
+        )
 
         self.test_loader = DataLoader(self.test_dataset, batch_size=1, shuffle=True)
         self.test_iter = iter(self.test_loader)
@@ -122,11 +129,9 @@ class GAN_Painter(Painter):
 
             if inverse_transform is False:
                 inputs[i] = self.transform(img[0].numpy(),
-                                           self.input_field, z=z,
-                                           stats=self.test_dataset.stats)
+                                           self.input_field, z=z)
                 outputs[i] = self.transform(img[1].numpy(),
-                                            self.label_fields[0], z=z,
-                                            stats=self.test_dataset.stats)
+                                            self.label_fields[0], z=z)
             else:
                 inputs[i] = img[0].cpu().numpy()
                 outputs[i] = img[1].cpu().numpy()
@@ -134,15 +139,14 @@ class GAN_Painter(Painter):
 
             #TODO is this the right stats?
             img = [x.cpu().numpy() for x in img]
-            painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats,
+            painted[i] = self.paint(img[0], z=z,
                                     inverse_transform=inverse_transform)
             if full:
-                self.t_painted[i] = self.paint(img[0], z=z, stats=self.test_dataset.stats,
+                self.t_painted[i] = self.paint(img[0], z=z,
                                           inverse_transform=False)
                 scalar_z = float(z)
                 self.t_outputs[i] = self.transform(img[1],
-                                            self.label_fields[0], z=scalar_z,
-                                            stats=self.test_dataset.stats)
+                                            self.label_fields[0], z=scalar_z)
 
             idxs.append(int(idx.cpu().numpy()))
 

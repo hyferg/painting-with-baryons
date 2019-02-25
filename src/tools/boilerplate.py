@@ -7,7 +7,7 @@ from src.models.network import Network
 from src.models.new_trainer import NewTrainer
 from src.tools.schedule import ScheduleLoader
 from src.tools.weights import FreezeModel, UnFreezeModel, init_weights
-from baryon_painter.utils.datasets import BAHAMASDataset
+from baryon_painter.utils.datasets import BAHAMASDataset, compile_transform
 
 
 def path_name():
@@ -39,17 +39,6 @@ class boiler(object):
             schedule['save_dir'] += '/extended/'
 
 
-        os.makedirs(schedule['save_dir'], exist_ok=True)
-        os.makedirs(schedule['save_dir'] + '/parts/', exist_ok=True)
-
-        with open(schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
-            torch.save(g_struc, handle)
-
-        with open(schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
-            dill.dump(schedule['transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        with open(schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
-            dill.dump(schedule['inv_transform'], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         generator = Network.factory(g_struc)
         generator.to(device)
@@ -94,6 +83,21 @@ class boiler(object):
                                        scale_to_SLICS=True,
                                        subtract_minimum=False
         )
+
+        stats = train_dataset.stats
+        os.makedirs(schedule['save_dir'], exist_ok=True)
+        os.makedirs(schedule['save_dir'] + '/parts/', exist_ok=True)
+
+        with open(schedule['save_dir'] + '/parts/g_struc.pickle', 'wb') as handle:
+            torch.save(g_struc, handle)
+
+        with open(schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
+            t = compile_transform(schedule['transform'], stats)
+            dill.dump(t, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
+            inv_t = compile_transform(schedule['inv_transform'], stats)
+            dill.dump(inv_t, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         #TODO
         test_files_info = training_files_info
