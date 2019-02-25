@@ -79,19 +79,35 @@ class boiler(object):
         transform = schedule['transform']
         inv_transform = schedule['inv_transform']
 
-        train_dataset = BAHAMASDataset(training_files_info, root_path=data_path,
+        n_training_stack = 11
+        n_validation_stack = 3
+        n_scale = 1
+
+        train_dataset = BAHAMASDataset(files=training_files_info, root_path=data_path,
                                        redshifts=schedule['redshifts'],
                                        label_fields=label_fields,
+                                       n_stack=n_training_stack,
                                        transform=transform,
-                                       inverse_transform=inv_transform)
+                                       inverse_transform=inv_transform,
+                                       n_feature_per_field=n_scale,
+                                       mmap_mode="r",
+                                       scale_to_SLICS=True,
+                                       subtract_minimum=False
+        )
 
         #TODO
         test_files_info = training_files_info
-        test_dataset = BAHAMASDataset(test_files_info, root_path=data_path,
-                                       redshifts=schedule['redshifts'],
-                                       label_fields=label_fields,
-                                       transform=transform,
-                                       inverse_transform=inv_transform)
+        test_dataset = BAHAMASDataset(data=train_dataset.data,
+                                      redshifts=schedule['redshifts'],
+                                      label_fields=label_fields,
+                                      n_stack=n_validation_stack, stack_offset=n_training_stack,
+                                      transform=transform,
+                                      inverse_transform=inv_transform,
+                                      n_feature_per_field=n_scale,
+                                      mmap_mode="r",
+                                      scale_to_SLICS=True,
+                                      subtract_minimum=False
+        )
 
         train_loader = DataLoader(
             train_dataset, batch_size=schedule['batch_size'], shuffle=True)
