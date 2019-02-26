@@ -91,16 +91,15 @@ class GAN_Painter(Painter):
             return prediction
 
     def load_test_data(self, data_path, redshifts, test=True):
-        train_file_info, test_files_info = files_info(data_path)
+        train_file_info, _ = files_info(data_path)
         label_fields = ["pressure"]
 
         n_training_stack = 11
         n_validation_stack = 3
         n_scale = 1
 
-        (print('using test data') if test else print('using train data'))
         self.test_dataset = BAHAMASDataset(
-            files=(test_files_info if test else train_file_info), root_path=data_path,
+            files=train_file_info, root_path=data_path,
             redshifts=redshifts,
             label_fields=label_fields,
             n_stack=n_validation_stack, stack_offset=n_training_stack,
@@ -140,7 +139,7 @@ class GAN_Painter(Painter):
             #TODO is this the right stats?
             img = [x.cpu().numpy() for x in img]
             painted[i] = self.paint(img[0], z=z,
-                                    inverse_transform=inverse_transform)
+                                    inverse_transform=inverse_transform, transform=True)
             if full:
                 self.t_painted[i] = self.paint(img[0], z=z,
                                           inverse_transform=False)
