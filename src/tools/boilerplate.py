@@ -67,6 +67,7 @@ class boiler(object):
 
         transform = schedule['transform']
         inv_transform = schedule['inv_transform']
+        z_transform = schedule['z_transform']
 
         n_training_stack = 11
         n_validation_stack = 3
@@ -94,6 +95,10 @@ class boiler(object):
         with open(schedule['save_dir'] + '/parts/transform.pickle', 'wb') as handle:
             t = compile_transform(schedule['transform'], stats)
             dill.dump(t, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(schedule['save_dir'] + '/parts/z_transform.pickle', 'wb') as handle:
+            z = schedule['z_transform']
+            dill.dump(z, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         with open(schedule['save_dir'] + '/parts/inv_transform.pickle', 'wb') as handle:
             inv_t = compile_transform(schedule['inv_transform'], stats)

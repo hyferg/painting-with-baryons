@@ -3,7 +3,7 @@ import pickle
 import pprint as pp
 from baryon_painter.models.utils import merge_aux_label
 
-def parse_data(iterator, device, iterator_type=None):
+def parse_data(iterator, device, iterator_type=None, z_transform=None):
     if iterator_type == 'troster':
         data = iterator.next()
         inputs = data[0][0].to(device)
@@ -14,6 +14,13 @@ def parse_data(iterator, device, iterator_type=None):
         inputs_bare = data[0][0].to(device)
         targets = data[0][1].to(device)
         redshifts = data[2].type(inputs_bare.type()).to(device)
+        inputs = merge_aux_label(inputs_bare, redshifts)
+
+    elif iterator_type == 'troster-redshift-transform':
+        data = iterator.next()
+        inputs_bare = data[0][0].to(device)
+        targets = data[0][1].to(device)
+        redshifts = z_transform(data[2].type(inputs_bare.type()).to(device))
         inputs = merge_aux_label(inputs_bare, redshifts)
 
     elif iterator_type == 'troster-redshift-validate':

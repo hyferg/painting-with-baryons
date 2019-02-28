@@ -78,7 +78,7 @@ class NewTrainer:
 
     def validate(self, generator, test_iter, iterator_type, device):
         inputs, targets = parse_data(test_iter, device,
-                                     iterator_type)
+                                     iterator_type, self.z_transform)
 
         inputs, targets, fake_targets = self.get_test_batch(
             inputs, targets, generator)
@@ -123,19 +123,23 @@ class NewTrainer:
         axs[0][0].set_title(f'G Loss Adv [{g_loss_adv[-1]}]')
         axs[0][0].scatter(np.arange(len(g_loss)),
                           signal.medfilt(g_loss_adv, median_window))
+        axs[0][0].set_yscale('log')
 
         axs[0][1].set_title(f'G Loss Percep [{g_loss_percep[-1]}]')
         axs[0][1].scatter(np.arange(len(g_loss)),
                           signal.medfilt(g_loss_percep, median_window))
+        axs[0][1].set_yscale('log')
 
         axs[1][0].set_title(f'G Loss [{g_loss[-1]}]')
         axs[1][0].scatter(np.arange(len(g_loss)),
                           signal.medfilt(g_loss, median_window))
+        axs[1][0].set_yscale('log')
 
 
         axs[1][1].set_title(f'D Loss [{d_loss[-1]}]')
         axs[1][1].scatter(np.arange(len(d_loss)),
                           signal.medfilt(d_loss, median_window))
+        axs[1][1].set_yscale('log')
 
         return fig
 
@@ -184,6 +188,8 @@ class Spectral(NewTrainer):
         train_loader_len = len(self.train_loader)
         test_loader = self.train_loader
         perceptual_loss = self.perceptual_loss
+        z_transform = self.schedule.get('z_transform')
+        self.z_transform = z_transform
 
         data_iters = 0
 
@@ -204,13 +210,13 @@ class Spectral(NewTrainer):
                     break
 
                 inputs, targets = parse_data(train_iter, device,
-                                                  iterator_type)
+                                             iterator_type, z_transform)
 
                 d_loss = spectral_d_iter(inputs, targets,
                                          generator, discriminator, d_optim)
 
                 inputs, targets = parse_data(train_iter, device,
-                                                  iterator_type)
+                                             iterator_type, z_transform)
 
                 g_loss_adv, g_loss_percep = spectral_g_iter(
                     inputs, targets,
@@ -225,7 +231,7 @@ class Spectral(NewTrainer):
                 self.d_loss.append(d_loss)
                 if i%5 is 0:
                     print(f'e{epoch}i{i}')
-                if i%101 is 0 or (i in [1, 2, 3, 4, 5, 10, 20 , 50, 75, 125] and epoch is 0):
+                if i%95 is 0 or (i in [1, 2, 3, 4, 5, 10, 20 , 50, 75, 125] and epoch is 0):
                     os.system('clear')
                     clear_output()
 

@@ -180,3 +180,8 @@ transform_fcs_half = transforms.Compose(
      torch.from_numpy,
      torch.nn.AvgPool2d(2)]
 )
+
+def z_transform(shift):
+    def func(z):
+        return z - shift
+    return func

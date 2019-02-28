@@ -26,6 +26,7 @@ class GAN_Painter(Painter):
                  img_dim=(1, 512, 512),
                  input_field='dm' ,
                  label_fields=['pressure'],
+                 z_transform_file='/z_transform.pickle',
     ):
 
 
@@ -35,6 +36,7 @@ class GAN_Painter(Painter):
         self.img_dim = img_dim
         self.transform = None
         self.inv_transform = None
+        self.z_transform = None
         self.test_data = None
         self.inputs = None
         self.outputs = None
@@ -57,6 +59,10 @@ class GAN_Painter(Painter):
             with open(parts_folder + inv_transform_file, 'rb') as handle:
                 self.inv_transform = pickle.load(handle)
 
+        if z_transform_file:
+            with open(parts_folder + z_transform_file, 'rb') as handle:
+                self.z_transform = pickle.load(handle)
+
     def load_state_from_file(self, filename, device):
         self.generator.load_self(filename, device)
         self.generator.to(self.compute_device)
@@ -76,6 +82,9 @@ class GAN_Painter(Painter):
         y = input.reshape(1, *input.shape)
         y = torch.tensor(y, device=self.compute_device)
         tensor_z = torch.tensor(z, device=self.compute_device, dtype=y.dtype)
+        if self.z_transform is not None:
+            tensor_z = self.z_transform(tensor_z)
+
 
         if self.generator.network_structure['iterator_type'] == 'troster-redshift':
             y = merge_aux_label(y, tensor_z)
