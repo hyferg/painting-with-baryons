@@ -1,4 +1,4 @@
-setuptools==28.8.0
+setuptools==65.5.1
 ipython==7.0.1
 python-dotenv==0.9.1
 matplotlib==3.0.0
